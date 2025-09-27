@@ -1,0 +1,36 @@
+
+# Виртуальное окружение (НЕ коммитим!)
+.venv/
+venv/
+env/
+
+# База данных SQLite (НЕ коммитим!)
+*.sqlite3
+*.db
+
+# Файл с секретными данными (токены, пароли)
+.env
+.env.local
+
+# Файлы, создаваемые PyCharm/IDE
+.idea/
+.vscode/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Логи и кэш
+*.log
+.pytest_cache/
+.mypy_cache/
+
+# Статические файлы (если собираются collectstatic)
+staticfiles/
+
+# Файлы операционной системы
+.DS_Store
+Thumbs.db
+
+# Миграции (РАСКОММЕНТИРУЙТЕ, ЕСЛИ ХОТИТЕ ИХ ИГНОРИРОВАТЬ)
+# app_vocab/migrations/
