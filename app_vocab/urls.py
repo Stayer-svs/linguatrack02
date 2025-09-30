@@ -11,4 +11,17 @@ urlpatterns = [
     # views.word_list - это функция, которая будет обрабатывать запрос.
     # name='word_list' - это имя маршрута, чтобы можно было ссылаться на него в коде.
     path('', views.word_list, name='word_list'),
+    path('statistics/', views.statistics, name='statistics'),
+    path('', views.word_list, name='word_list'),
+    path('statistics/', views.statistics, name='statistics'),
+    path('test/multiple-choice/', views.multiple_choice_test, name='multiple_choice_test'),
+    path('test/check-answer/', views.check_multiple_choice, name='check_multiple_choice'),
+    path('', views.word_list, name='word_list'),
+    path('statistics/', views.statistics, name='statistics'),
+    path('test/multiple-choice/', views.multiple_choice_test, name='multiple_choice_test'),
+    path('test/check-answer/', views.check_multiple_choice, name='check_multiple_choice'),
+    # Личный кабинет
+    path('my-words/', views.my_words, name='my_words'),
+    path('my-words/add/', views.add_word, name='add_word'),
+    path('my-words/remove/<int:word_id>/', views.remove_word, name='remove_word'),
 ]

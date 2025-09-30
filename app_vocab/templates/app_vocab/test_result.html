@@ -1,0 +1,78 @@
+<!-- app_vocab/templates/app_vocab/test_result.html -->
+{% extends "app_vocab/base.html" %}
+
+{% block title %}Результат теста{% endblock %}
+
+{% block extra_css %}
+<style>
+    .result-container {
+        max-width: 600px;
+        margin: 0 auto;
+        text-align: center;
+    }
+    .result-icon {
+        font-size: 4em;
+        margin: 20px 0;
+    }
+    .correct { color: #4CAF50; }
+    .incorrect { color: #f44336; }
+    .result-message {
+        font-size: 1.5em;
+        margin: 20px 0;
+    }
+    .word-info {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 20px 0;
+    }
+    .next-btn {
+        padding: 12px 30px;
+        background: #2196F3;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 1.1em;
+        cursor: pointer;
+        margin: 10px;
+    }
+    .next-btn:hover {
+        background: #1976D2;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="result-container">
+    <h1>📊 Результат теста</h1>
+
+    {% if is_correct %}
+        <div class="result-icon correct">✅</div>
+        <div class="result-message correct">Правильно! Отличная работа! 🎉</div>
+    {% else %}
+        <div class="result-icon incorrect">❌</div>
+        <div class="result-message incorrect">Попробуйте еще раз! 💪</div>
+    {% endif %}
+
+    <div class="word-info">
+        <p><strong>Правильный ответ:</strong></p>
+        <p style="font-size: 1.2em;">
+            {% with word=options|first %}
+                {{ word.original }} - {{ word.translation }}
+                {% if word.transcription %}
+                    <br><small>[{{ word.transcription }}]</small>
+                {% endif %}
+            {% endwith %}
+        </p>
+    </div>
+
+    <div>
+        <a href="{% url 'app_vocab:multiple_choice_test' %}" class="next-btn">
+            🔄 Следующий вопрос
+        </a>
+        <a href="/" class="next-btn" style="background: #4CAF50;">
+            🎓 Обычная тренировка
+        </a>
+    </div>
+</div>
+{% endblock %}

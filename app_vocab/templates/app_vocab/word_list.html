@@ -1,219 +1,210 @@
 <!-- app_vocab/templates/app_vocab/word_list.html -->
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <title>Тренажер слов</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            line-height: 1.6;
-        }
-        h1 {
-            color: #333;
-            text-align: center;
-        }
-        .controls {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .reverse-btn {
-            padding: 10px 20px;
-            background-color: #4CAF50; /* Зеленый */
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            margin: 5px;
-        }
-        .reverse-btn:hover {
-            background-color: #45a049;
-        }
-        .word-card {
-            border: 1px solid #ddd;
-            padding: 15px;
-            margin: 15px auto;
-            border-radius: 8px;
-            max-width: 500px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .question {
-            font-weight: bold;
-            font-size: 1.4em;
-            text-align: center;
-            margin-bottom: 10px;
-        }
-        .transcription {
-            text-align: center;
-            font-style: italic;
-            color: #666;
-            margin-bottom: 10px;
-        }
-        .answer {
-            text-align: center;
-            font-size: 1.2em;
-            color: #2E7D32; /* Темно-зеленый */
-            margin: 15px 0;
-            display: none; /* Изначально скрываем ответ */
-        }
-        .action-buttons {
-            text-align: center;
-        }
-        .btn {
-            padding: 8px 16px;
-            margin: 0 5px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        .show-btn {
-            background-color: #2196F3; /* Синий */
-            color: white;
-        }
-        .know-btn {
-            background-color: #4CAF50; /* Зеленый */
-            color: white;
-        }
-        .dont-know-btn {
-            background-color: #f44336; /* Красный */
-            color: white;
-        }
-        .btn:hover {
-            opacity: 0.9;
-        }
-        .stats {
-            text-align: center;
-            font-size: 0.9em;
-            color: #999;
-        }
-        .filter-btn {
-            padding: 8px 16px;
-            margin: 5px;
-            background-color: #e0e0e0; /* Серый по умолчанию */
-            color: #333;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        .filter-btn.active {
-            background-color: #2196F3; /* Синий для активного фильтра */
-            color: white;
-        }
-        .filter-btn:hover {
-            background-color: #d5d5d5;
-        }
-        .filter-btn.active:hover {
-            background-color: #1976D2;
-        }
+{% extends "app_vocab/base.html" %}
 
-    </style>
-</head>
-<body>
-    <h1>🗣️ Тренажер слов</h1>
+{% block title %}Тренажер слов{% endblock %}
 
-    <!-- Блок управления (реверс) -->
-    <div class="controls">
-        {% if is_reverse %}
-            <a href="?reverse=0"><button class="reverse-btn">Режим: ПЕРЕВОД → СЛОВО</button></a>
-            <p><small>(Показывается перевод, нужно вспомнить слово)</small></p>
-        {% else %}
-            <a href="?reverse=1"><button class="reverse-btn">Режим: СЛОВО → ПЕРЕВОД</button></a>
-            <p><small>(Показывается слово, нужно вспомнить перевод)</small></p>
+{% block extra_css %}
+<style>
+    .stats-bar {
+        background: #f5f5f5;
+        padding: 10px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+    .stats-bar span {
+        margin: 0 10px;
+        font-size: 0.9em;
+    }
+    .controls {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .reverse-btn {
+        padding: 10px 20px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        margin: 5px;
+    }
+    .reverse-btn:hover {
+        background-color: #45a049;
+    }
+    .word-card {
+        border: 1px solid #ddd;
+        padding: 15px;
+        margin: 15px auto;
+        border-radius: 8px;
+        max-width: 500px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .question {
+        font-weight: bold;
+        font-size: 1.4em;
+        text-align: center;
+        margin-bottom: 10px;
+    }
+    .transcription {
+        text-align: center;
+        font-style: italic;
+        color: #666;
+        margin-bottom: 10px;
+    }
+    .answer {
+        text-align: center;
+        font-size: 1.2em;
+        color: #2E7D32;
+        margin: 15px 0;
+        display: none;
+    }
+    .action-buttons {
+        text-align: center;
+    }
+    .btn {
+        padding: 8px 16px;
+        margin: 0 5px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+    }
+    .show-btn {
+        background-color: #2196F3;
+        color: white;
+    }
+    .know-btn {
+        background-color: #4CAF50;
+        color: white;
+    }
+    .dont-know-btn {
+        background-color: #f44336;
+        color: white;
+    }
+    .btn:hover {
+        opacity: 0.9;
+    }
+    .progress-info {
+        text-align: center;
+        font-size: 0.8em;
+        color: #999;
+        margin-top: 10px;
+    }
+    .no-words {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+    }
+    h1 {
+        text-align: center;
+        color: #333;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>🎓 Тренажер слов (SRS)</h1>
+
+<!-- Статистика -->
+{% if statistics %}
+<div class="stats-bar">
+    <span>📊 Всего слов: {{ statistics.total_words }}</span>
+    <span>🆕 Новые: {{ statistics.new_words }}</span>
+    <span>📚 В процессе: {{ statistics.learning_words }}</span>
+    <span>✅ Изучено: {{ statistics.learned_words }}</span>
+    <span>🎯 На сегодня: {{ statistics.today_words }}</span>
+</div>
+{% endif %}
+
+<!-- Блок управления (реверс) -->
+<div class="controls">
+    {% if is_reverse %}
+        <a href="?reverse=0"><button class="reverse-btn">Режим: ПЕРЕВОД → СЛОВО</button></a>
+        <p><small>(Показывается перевод, нужно вспомнить слово)</small></p>
+    {% else %}
+        <a href="?reverse=1"><button class="reverse-btn">Режим: СЛОВО → ПЕРЕВОД</button></a>
+        <p><small>(Показывается слово, нужно вспомнить перевод)</small></p>
+    {% endif %}
+</div>
+
+<!-- Список слов-карточек -->
+{% if user_words %}
+    {% for user_word in user_words %}
+        <div class="word-card">
+            <!-- Вопрос (зависит от режима реверса) -->
+            <div class="question">
+                {% if is_reverse %}
+                    {{ user_word.word.translation }}
+                {% else %}
+                    {{ user_word.word.original }}
+                {% endif %}
+            </div>
+
+            <!-- Транскрипция (показываем только в прямом режиме) -->
+            {% if not is_reverse and user_word.word.transcription %}
+                <div class="transcription">[{{ user_word.word.transcription }}]</div>
+            {% endif %}
+
+            <!-- Ответ (изначально скрыт) -->
+            <div class="answer" id="answer-{{ user_word.id }}">
+                {% if is_reverse %}
+                    <strong>{{ user_word.word.original }}</strong>
+                    {% if user_word.word.transcription %}
+                        <br><em>[{{ user_word.word.transcription }}]</em>
+                    {% endif %}
+                {% else %}
+                    <strong>{{ user_word.word.translation }}</strong>
+                {% endif %}
+            </div>
+
+            <!-- Кнопки действий -->
+            <div class="action-buttons">
+                <!-- Кнопка "Показать перевод" -->
+                <button class="btn show-btn" onclick="showAnswer({{ user_word.id }})">Показать ответ</button>
+
+                <!-- Кнопки "Знаю"/"Не знаю" (изначально скрыты) -->
+                <span id="knowledge-buttons-{{ user_word.id }}" style="display: none;">
+                    <a href="?word_id={{ user_word.id }}&action=know{% if is_reverse %}&reverse=1{% endif %}">
+                        <button class="btn know-btn">Знаю ✓</button>
+                    </a>
+                    <a href="?word_id={{ user_word.id }}&action=dont_know{% if is_reverse %}&reverse=1{% endif %}">
+                        <button class="btn dont-know-btn">Не знаю ✗</button>
+                    </a>
+                </span>
+            </div>
+
+            <!-- Информация о прогрессе -->
+            <div class="progress-info">
+                Уровень: {{ user_word.get_knowledge_level }} |
+                Повторений: {{ user_word.repetition }} |
+                След. повтор: {{ user_word.next_review|date:"d.m.Y" }}
+            </div>
+        </div>
+    {% endfor %}
+{% else %}
+    <div class="no-words">
+        <h3>🎉 Отличная работа!</h3>
+        <p>На сегодня все слова повторены.</p>
+        <p>Новые слова появятся согласно расписанию интервальных повторений.</p>
+        {% if no_words_message %}
+            <p><em>{{ no_words_message }}</em></p>
         {% endif %}
     </div>
+{% endif %}
+{% endblock %}
 
-    <!-- НОВЫЙ БЛОК: Фильтры по уровню знания -->
-    <div class="controls">
-        <h3>Какие слова учить?</h3>
-        <div>
-            <a href="?filter=all&reverse={% if is_reverse %}1{% else %}0{% endif %}">
-                <button class="filter-btn {% if current_filter == 'all' %}active{% endif %}">Все слова</button>
-            </a>
-            <a href="?filter=new&reverse={% if is_reverse %}1{% else %}0{% endif %}">
-                <button class="filter-btn {% if current_filter == 'new' %}active{% endif %}">Новые (уровень 0)</button>
-            </a>
-            <a href="?filter=for_review&reverse={% if is_reverse %}1{% else %}0{% endif %}">
-                <button class="filter-btn {% if current_filter == 'for_review' %}active{% endif %}">Для повторения (ур. 1-4)</button>
-            </a>
-            <a href="?filter=learned&reverse={% if is_reverse %}1{% else %}0{% endif %}">
-                <button class="filter-btn {% if current_filter == 'learned' %}active{% endif %}">Изученные (ур. 5+)</button>
-            </a>
-        </div>
-    </div>
-
-
-    <!-- Список слов-карточек -->
-    {% if words %}
-        {% for word in words %}
-            <div class="word-card">
-                <!-- Вопрос (зависит от режима реверса) -->
-                <div class="question">
-                    {% if is_reverse %}
-                        {{ word.translation }}
-                    {% else %}
-                        {{ word.original }}
-                    {% endif %}
-                </div>
-
-                <!-- Транскрипция (показываем только в прямом режиме) -->
-                {% if not is_reverse and word.transcription %}
-                    <div class="transcription">[{{ word.transcription }}]</div>
-                {% endif %}
-
-                <!-- Ответ (изначально скрыт) -->
-                <div class="answer" id="answer-{{ word.id }}">
-                    {% if is_reverse %}
-                        <strong>{{ word.original }}</strong>
-                        {% if word.transcription %}
-                            <br><em>[{{ word.transcription }}]</em>
-                        {% endif %}
-                    {% else %}
-                        <strong>{{ word.translation }}</strong>
-                    {% endif %}
-                </div>
-
-                <!-- Кнопки действий -->
-                <div class="action-buttons">
-                    <!-- Кнопка "Показать перевод" -->
-
-                        <button class="btn show-btn" onclick="showAnswer({{ word.id }})">Показать ответ</button>
-
-
-                    <!-- Кнопки "Знаю"/"Не знаю" (изначально скрыты) -->
-                    <span id="knowledge-buttons-{{ word.id }}" style="display: none;">
-                        <a href="?word_id={{ word.id }}&action=know{% if is_reverse %}&reverse=1{% endif %}">
-                            <button class="btn know-btn">Знаю ✓</button>
-                        </a>
-                        <a href="?word_id={{ word.id }}&action=dont_know{% if is_reverse %}&reverse=1{% endif %}">
-                            <button class="btn dont-know-btn">Не знаю ✗</button>
-                        </a>
-                    </span>
-                </div>
-
-                <!-- Статистика слова -->
-                <div class="stats">
-                    Уровень: {{ word.knowledge_level }} | Добавлено: {{ word.date_added|date:"d.m.Y" }}
-                </div>
-            </div>
-        {% endfor %}
-    {% else %}
-        <p style="text-align: center;">Пока нет добавленных слов. <a href="/admin/">Добавьте их через админку</a>.</p>
-    {% endif %}
-
-    <!-- Простой JavaScript для показа ответа на клиенте (без перезагрузки) -->
-    <script>
-        function showAnswer(wordId) {
-            // Показываем блок с ответом
-            document.getElementById('answer-' + wordId).style.display = 'block';
-            // Показываем кнопки "Знаю"/"Не знаю"
-            document.getElementById('knowledge-buttons-' + wordId).style.display = 'inline';
-            // Скрываем кнопку "Показать ответ"
-            event.target.style.display = 'none';
-        }
-    </script>
-</body>
-</html>
+{% block extra_js %}
+<script>
+    function showAnswer(userWordId) {
+        // Показываем блок с ответом
+        document.getElementById('answer-' + userWordId).style.display = 'block';
+        // Показываем кнопки "Знаю"/"Не знаю"
+        document.getElementById('knowledge-buttons-' + userWordId).style.display = 'inline';
+        // Скрываем кнопку "Показать ответ"
+        event.target.style.display = 'none';
+    }
+</script>
+{% endblock %}

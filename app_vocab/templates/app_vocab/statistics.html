@@ -1,0 +1,122 @@
+<!-- app_vocab/templates/app_vocab/statistics.html -->
+{% extends "app_vocab/base.html" %}
+
+{% block title %}Статистика обучения{% endblock %}
+
+{% block content %}
+<style>
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin: 30px 0;
+    }
+    .stat-card {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        text-align: center;
+        border-left: 4px solid #4CAF50;
+    }
+    .stat-number {
+        font-size: 2em;
+        font-weight: bold;
+        color: #333;
+    }
+    .stat-label {
+        color: #666;
+        margin-top: 5px;
+    }
+    .progress-section {
+        margin: 30px 0;
+    }
+    .progress-bar {
+        background: #e0e0e0;
+        border-radius: 10px;
+        height: 20px;
+        margin: 10px 0;
+    }
+    .progress-fill {
+        background: #4CAF50;
+        height: 100%;
+        border-radius: 10px;
+        transition: width 0.3s ease;
+    }
+    .progress-label {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px;
+    }
+    h1 {
+        color: #333;
+        text-align: center;
+        margin-bottom: 30px;
+    }
+</style>
+
+<h1>📊 Статистика обучения</h1>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-number">{{ statistics.total_words }}</div>
+        <div class="stat-label">Всего слов</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ statistics.new_words }}</div>
+        <div class="stat-label">Новые слова</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ statistics.learning_words }}</div>
+        <div class="stat-label">В процессе</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ statistics.learned_words }}</div>
+        <div class="stat-label">Изучено</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ statistics.today_words }}</div>
+        <div class="stat-label">На сегодня</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ statistics.total_reviews }}</div>
+        <div class="stat-label">Всего повторений</div>
+    </div>
+</div>
+
+<div class="progress-section">
+    <h3>Прогресс изучения</h3>
+    {% with total=statistics.total_words %}
+        {% if total > 0 %}
+            <div>
+                <div class="progress-label">
+                    <span>Новые слова</span>
+                    <span>{{ statistics.new_words }} ({% widthratio statistics.new_words total 100 %}%)</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {% widthratio statistics.new_words total 100 %}%"></div>
+                </div>
+            </div>
+            <div>
+                <div class="progress-label">
+                    <span>В процессе</span>
+                    <span>{{ statistics.learning_words }} ({% widthratio statistics.learning_words total 100 %}%)</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {% widthratio statistics.learning_words total 100 %}%"></div>
+                </div>
+            </div>
+            <div>
+                <div class="progress-label">
+                    <span>Изучено</span>
+                    <span>{{ statistics.learned_words }} ({% widthratio statistics.learned_words total 100 %}%)</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {% widthratio statistics.learned_words total 100 %}%"></div>
+                </div>
+            </div>
+        {% else %}
+            <p>Пока нет данных для отображения прогресса.</p>
+        {% endif %}
+    {% endwith %}
+</div>
+{% endblock %}

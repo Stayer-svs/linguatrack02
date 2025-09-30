@@ -1,0 +1,156 @@
+<!-- app_vocab/templates/app_vocab/multiple_choice.html -->
+{% extends "app_vocab/base.html" %}
+
+{% block title %}Тест с выбором ответа{% endblock %}
+
+{% block extra_css %}
+<style>
+    .test-container {
+        max-width: 600px;
+        margin: 0 auto;
+        text-align: center;
+    }
+    .question {
+        font-size: 1.5em;
+        font-weight: bold;
+        margin: 30px 0;
+        color: #333;
+    }
+    .options-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 15px;
+        margin: 30px 0;
+    }
+    .option-btn {
+        padding: 15px 20px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        background: white;
+        cursor: pointer;
+        font-size: 1.1em;
+        transition: all 0.3s ease;
+    }
+    .option-btn:hover {
+        border-color: #2196F3;
+        background: #f8f9fa;
+    }
+    .option-btn.selected {
+        border-color: #4CAF50;
+        background: #e8f5e8;
+    }
+    .submit-btn {
+        padding: 12px 30px;
+        background: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 1.1em;
+        cursor: pointer;
+        margin-top: 20px;
+    }
+    .submit-btn:disabled {
+        background: #cccccc;
+        cursor: not-allowed;
+    }
+    .submit-btn:hover:not(:disabled) {
+        background: #45a049;
+    }
+    .no-words {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+    }
+    .test-info {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    .navigation-links {
+        margin-top: 30px;
+    }
+    .navigation-links a {
+        margin: 0 10px;
+        color: #2196F3;
+        text-decoration: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="test-container">
+    <h1>🎯 Тест с выбором ответа</h1>
+
+    {% if no_words_message %}
+        <div class="no-words">
+            <h3>📝 Нет слов для тестирования</h3>
+            <p>{{ no_words_message }}</p>
+            <div class="navigation-links">
+                <a href="/">➡️ Перейти к тренировке</a>
+            </div>
+        </div>
+    {% else %}
+        <div class="test-info">
+            <p>Выберите правильный перевод для слова:</p>
+        </div>
+
+        <div class="question">
+            "{{ question_word.word.original }}"
+            {% if question_word.word.transcription %}
+                <br><small style="color: #666;">[{{ question_word.word.transcription }}]</small>
+            {% endif %}
+        </div>
+
+        <form method="post" action="{% url 'app_vocab:check_multiple_choice' %}" id="test-form">
+            {% csrf_token %}
+            <input type="hidden" name="correct_answer" value="{{ correct_answer_id }}">
+            <input type="hidden" name="question_word_id" value="{{ question_word.id }}">
+            <input type="hidden" name="selected_answer" id="selected-answer" value="">
+
+            <div class="options-grid">
+                {% for option in options %}
+                    <button type="button"
+                            class="option-btn"
+                            data-answer-id="{{ option.id }}"
+                            onclick="selectAnswer({{ option.id }}, this)">
+                        {{ option.translation }}
+                    </button>
+                {% endfor %}
+            </div>
+
+            <button type="submit" class="submit-btn" id="submit-btn" disabled>
+                ✅ Проверить ответ
+            </button>
+        </form>
+
+        <div class="navigation-links">
+            <a href="/">🎓 Обычная тренировка</a>
+            <a href="{% url 'app_vocab:multiple_choice_test' %}">🔄 Следующий вопрос</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let selectedAnswerId = null;
+
+    function selectAnswer(answerId, button) {
+        // Сбрасываем выделение у всех кнопок
+        document.querySelectorAll('.option-btn').forEach(btn => {
+            btn.classList.remove('selected');
+        });
+
+        // Выделяем выбранную кнопку
+        button.classList.add('selected');
+
+        // Сохраняем выбранный ответ
+        selectedAnswerId = answerId;
+        document.getElementById('selected-answer').value = answerId;
+
+        // Активируем кнопку отправки
+        document.getElementById('submit-btn').disabled = false;
+    }
+</script>
+{% endblock %}

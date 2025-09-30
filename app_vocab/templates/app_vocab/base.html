@@ -1,0 +1,139 @@
+<!-- app_vocab/templates/app_vocab/base.html -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Vocabulary Trainer{% endblock %}</title>
+    <style>
+        /* Основные стили */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+        }
+
+        /* Навигационная панель */
+        .navbar {
+            background-color: #343a40;
+            padding: 1rem 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+
+        .nav-brand {
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-decoration: none;
+        }
+
+        .nav-menu {
+            display: flex;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .nav-item {
+            margin-left: 2rem;
+        }
+
+        .nav-link {
+            color: white;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+
+        .nav-link:hover {
+            background-color: #495057;
+        }
+
+        .nav-link.active {
+            background-color: #007bff;
+        }
+
+        /* Основной контент */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            .nav-container {
+                flex-direction: column;
+            }
+
+            .nav-menu {
+                margin-top: 1rem;
+            }
+
+            .nav-item {
+                margin: 0 0.5rem;
+            }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Навигационная панель -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-brand">🗣️ Vocabulary Trainer</a>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}">
+                        🎓 Тренировка
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a href="{% url 'app_vocab:my_words' %}"
+                       class="nav-link {% if request.path == '/my-words/' %}active{% endif %}">
+                        📚 Мои слова
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a href="{% url 'app_vocab:multiple_choice_test' %}"
+                       class="nav-link {% if request.path == '/test/multiple-choice/' %}active{% endif %}">
+                        🧪 Тест
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a href="/statistics/" class="nav-link {% if request.path == '/statistics/' %}active{% endif %}">
+                        📊 Статистика
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/admin/" class="nav-link">
+                        ⚙️ Админка
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Основной контент -->
+    <div class="container">
+        {% block content %}
+        {% endblock %}
+    </div>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

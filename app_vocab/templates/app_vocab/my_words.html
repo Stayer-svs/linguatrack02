@@ -1,0 +1,216 @@
+<!-- app_vocab/templates/app_vocab/my_words.html -->
+{% extends "app_vocab/base.html" %}
+
+{% block title %}Мои слова{% endblock %}
+
+{% block extra_css %}
+<style>
+    .words-container {
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+    .stats-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin: 20px 0;
+    }
+    .stat-card {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+        border-left: 4px solid #4CAF50;
+    }
+    .stat-number {
+        font-size: 1.5em;
+        font-weight: bold;
+        color: #333;
+    }
+    .stat-label {
+        color: #666;
+        font-size: 0.9em;
+    }
+    .actions-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 30px 0 20px 0;
+    }
+    .add-btn {
+        padding: 10px 20px;
+        background: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 1em;
+    }
+    .add-btn:hover {
+        background: #45a049;
+    }
+    .words-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .words-table th,
+    .words-table td {
+        padding: 12px 15px;
+        text-align: left;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    .words-table th {
+        background: #343a40;
+        color: white;
+        font-weight: bold;
+    }
+    .words-table tr:hover {
+        background: #f8f9fa;
+    }
+    .delete-btn {
+        background: #f44336;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.9em;
+    }
+    .delete-btn:hover {
+        background: #d32f2f;
+    }
+    .no-words {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+    .knowledge-badge {
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.8em;
+        font-weight: bold;
+    }
+    .badge-new { background: #ffeb3b; color: #333; }
+    .badge-learning { background: #2196F3; color: white; }
+    .badge-learned { background: #4CAF50; color: white; }
+    .messages {
+        margin: 20px 0;
+    }
+    .alert {
+        padding: 12px 15px;
+        border-radius: 6px;
+        margin: 10px 0;
+    }
+    .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .alert-info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    .alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="words-container">
+    <h1>📚 Мои слова</h1>
+
+    <!-- Сообщения -->
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Статистика -->
+    <div class="stats-cards">
+        <div class="stat-card">
+            <div class="stat-number">{{ words_stats.total }}</div>
+            <div class="stat-label">Всего слов</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ words_stats.new }}</div>
+            <div class="stat-label">Новые</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ words_stats.learning }}</div>
+            <div class="stat-label">В процессе</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ words_stats.learned }}</div>
+            <div class="stat-label">Изучено</div>
+        </div>
+    </div>
+
+    <!-- Заголовок с кнопкой -->
+    <div class="actions-header">
+        <h2>Список слов</h2>
+        <a href="{% url 'app_vocab:add_word' %}" class="add-btn">
+            ➕ Добавить слово
+        </a>
+    </div>
+
+    <!-- Таблица слов -->
+    {% if user_words %}
+        <table class="words-table">
+            <thead>
+                <tr>
+                    <th>Слово</th>
+                    <th>Транскрипция</th>
+                    <th>Перевод</th>
+                    <th>Уровень</th>
+                    <th>След. повторение</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user_word in user_words %}
+                <tr>
+                    <td><strong>{{ user_word.word.original }}</strong></td>
+                    <td>
+                        {% if user_word.word.transcription %}
+                            [{{ user_word.word.transcription }}]
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td>{{ user_word.word.translation }}</td>
+                    <td>
+                        <span class="knowledge-badge
+                            {% if user_word.repetition == 0 %}badge-new
+                            {% elif user_word.repetition <= 3 %}badge-learning
+                            {% else %}badge-learned{% endif %}">
+                            {{ user_word.get_knowledge_level }}
+                        </span>
+                    </td>
+                    <td>{{ user_word.next_review|date:"d.m.Y" }}</td>
+                    <td>
+                        <form method="post" action="{% url 'app_vocab:remove_word' user_word.id %}" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="delete-btn"
+                                    onclick="return confirm('Удалить слово &quot;{{ user_word.word.original }}&quot; из вашего словаря?')">
+                                🗑️ Удалить
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="no-words">
+            <h3>📝 Ваш словарь пуст</h3>
+            <p>Добавьте первые слова для начала обучения!</p>
+            <a href="{% url 'app_vocab:add_word' %}" class="add-btn" style="display: inline-block; margin-top: 15px;">
+                ➕ Добавить первое слово
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
