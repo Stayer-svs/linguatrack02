@@ -1,0 +1,219 @@
+<!-- app_vocab/templates/app_vocab/settings.html -->
+{% extends "app_vocab/base.html" %}
+
+{% block title %}Настройки{% endblock %}
+
+{% block extra_css %}
+<style>
+    .settings-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    .settings-section {
+        background: white;
+        padding: 25px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 25px;
+    }
+    .settings-section h2 {
+        color: #333;
+        border-bottom: 2px solid #f0f0f0;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+    }
+    .form-group {
+        margin-bottom: 20px;
+    }
+    .form-label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: bold;
+        color: #333;
+    }
+    .form-input {
+        width: 100%;
+        max-width: 300px;
+        padding: 10px;
+        border: 2px solid #e0e0e0;
+        border-radius: 6px;
+        font-size: 1em;
+    }
+    .form-input:focus {
+        border-color: #2196F3;
+        outline: none;
+    }
+    .checkbox-group {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+    .checkbox-group input {
+        margin-right: 10px;
+        transform: scale(1.2);
+    }
+    .submit-btn {
+        background: #4CAF50;
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 6px;
+        font-size: 1.1em;
+        cursor: pointer;
+        margin-top: 20px;
+    }
+    .submit-btn:hover {
+        background: #45a049;
+    }
+    .help-text {
+        font-size: 0.9em;
+        color: #666;
+        margin-top: 5px;
+    }
+    .messages {
+        margin: 20px 0;
+    }
+    .alert {
+        padding: 12px 15px;
+        border-radius: 6px;
+        margin: 10px 0;
+    }
+    .alert-success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="settings-container">
+    <h1>⚙️ Настройки обучения</h1>
+
+    <!-- Сообщения -->
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+
+        <!-- Настройки обучения -->
+        <div class="settings-section">
+            <h2>📚 Настройки обучения</h2>
+
+            <div class="form-group">
+                <label for="daily_new_words" class="form-label">
+                    Новых слов в день
+                </label>
+                <input type="number"
+                       id="daily_new_words"
+                       name="daily_new_words"
+                       class="form-input"
+                       value="{{ profile.daily_new_words }}"
+                       min="1" max="50">
+                <div class="help-text">Сколько новых слов добавлять каждый день</div>
+            </div>
+
+            <div class="form-group">
+                <label for="daily_review_limit" class="form-label">
+                    Лимит повторений в день
+                </label>
+                <input type="number"
+                       id="daily_review_limit"
+                       name="daily_review_limit"
+                       class="form-input"
+                       value="{{ profile.daily_review_limit }}"
+                       min="5" max="100">
+                <div class="help-text">Максимальное количество слов для повторения за день</div>
+            </div>
+
+            <div class="form-group">
+                <label for="default_interval" class="form-label">
+                    Базовый интервал (дни)
+                </label>
+                <input type="number"
+                       id="default_interval"
+                       name="default_interval"
+                       class="form-input"
+                       value="{{ profile.default_interval }}"
+                       min="1" max="30">
+                <div class="help-text">Интервал между первыми повторениями новых слов</div>
+            </div>
+        </div>
+
+        <!-- Настройки тестов -->
+        <div class="settings-section">
+            <h2>🎯 Настройки тестов</h2>
+
+            <div class="checkbox-group">
+                <input type="checkbox"
+                       id="enable_multiple_choice"
+                       name="enable_multiple_choice"
+                       {% if profile.enable_multiple_choice %}checked{% endif %}>
+                <label for="enable_multiple_choice" class="form-label">
+                    Включить тест с выбором ответа
+                </label>
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox"
+                       id="enable_matching"
+                       name="enable_matching"
+                       {% if profile.enable_matching %}checked{% endif %}>
+                <label for="enable_matching" class="form-label">
+                    Включить игру в сопоставление
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label for="test_questions_count" class="form-label">
+                    Количество вопросов в тесте
+                </label>
+                <input type="number"
+                       id="test_questions_count"
+                       name="test_questions_count"
+                       class="form-input"
+                       value="{{ profile.test_questions_count }}"
+                       min="5" max="50">
+                <div class="help-text">Сколько вопросов показывать в одном тесте</div>
+            </div>
+        </div>
+
+        <!-- Настройки уведомлений -->
+        <div class="settings-section">
+            <h2>🔔 Настройки уведомлений</h2>
+
+            <div class="checkbox-group">
+                <input type="checkbox"
+                       id="notification_enabled"
+                       name="notification_enabled"
+                       {% if profile.notification_enabled %}checked{% endif %}>
+                <label for="notification_enabled" class="form-label">
+                    Включить уведомления
+                </label>
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox"
+                       id="daily_goal_reminder"
+                       name="daily_goal_reminder"
+                       {% if profile.daily_goal_reminder %}checked{% endif %}>
+                <label for="daily_goal_reminder" class="form-label">
+                    Напоминание о ежедневных целях
+                </label>
+            </div>
+        </div>
+
+        <button type="submit" class="submit-btn">
+            💾 Сохранить настройки
+        </button>
+    </form>
+</div>
+{% endblock %}

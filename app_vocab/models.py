@@ -124,6 +124,19 @@ class UserProfile(models.Model):
     total_reviews = models.IntegerField(default=0, verbose_name='Всего повторений')
     streak_days = models.IntegerField(default=0, verbose_name='Дней подряд')
 
+    # НОВЫЕ поля настроек (ДОБАВИТЬ эти строки):
+    daily_new_words = models.IntegerField(default=5, verbose_name='Новых слов в день')
+    default_interval = models.IntegerField(default=1, verbose_name='Базовый интервал (дни)')
+
+    # Настройки тестов (ДОБАВИТЬ):
+    enable_multiple_choice = models.BooleanField(default=True, verbose_name='Тест с выбором')
+    enable_matching = models.BooleanField(default=True, verbose_name='Сопоставление')
+    test_questions_count = models.IntegerField(default=10, verbose_name='Вопросов в тесте')
+
+    # Уведомления (можно заменить существующее поле или оставить оба):
+    daily_goal_reminder = models.BooleanField(default=True, verbose_name='Напоминание о целях')
+
+
     class Meta:
         verbose_name = 'Профиль пользователя'
         verbose_name_plural = 'Профили пользователей'

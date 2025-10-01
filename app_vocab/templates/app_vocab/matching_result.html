@@ -1,0 +1,185 @@
+<!-- app_vocab/templates/app_vocab/matching_result.html -->
+{% extends "app_vocab/base.html" %}
+
+{% block title %}Результат сопоставления{% endblock %}
+
+{% block extra_css %}
+<style>
+    .result-container {
+        max-width: 600px;
+        margin: 0 auto;
+        text-align: center;
+    }
+    .result-icon {
+        font-size: 4em;
+        margin: 20px 0;
+    }
+    .result-score {
+        font-size: 3em;
+        font-weight: bold;
+        margin: 20px 0;
+    }
+    .excellent { color: #4CAF50; }
+    .good { color: #2196F3; }
+    .average { color: #FF9800; }
+    .poor { color: #f44336; }
+    .result-message {
+        font-size: 1.3em;
+        margin: 20px 0;
+        padding: 15px;
+        border-radius: 8px;
+        background: #f8f9fa;
+    }
+    .progress-bar {
+        background: #e0e0e0;
+        border-radius: 10px;
+        height: 20px;
+        margin: 20px 0;
+        overflow: hidden;
+    }
+    .progress-fill {
+        background: #4CAF50;
+        height: 100%;
+        border-radius: 10px;
+        transition: width 0.5s ease;
+    }
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+        margin: 30px 0;
+    }
+    .stat-card {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        text-align: center;
+    }
+    .stat-number {
+        font-size: 2em;
+        font-weight: bold;
+        color: #333;
+    }
+    .stat-label {
+        color: #666;
+        margin-top: 5px;
+    }
+    .next-btn {
+        padding: 12px 30px;
+        background: #2196F3;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 1.1em;
+        cursor: pointer;
+        margin: 10px;
+        text-decoration: none;
+        display: inline-block;
+    }
+    .next-btn:hover {
+        background: #1976D2;
+    }
+    .next-btn.primary {
+        background: #4CAF50;
+    }
+    .next-btn.primary:hover {
+        background: #45a049;
+    }
+    .encouragement {
+        margin: 25px 0;
+        padding: 20px;
+        background: #e8f5e8;
+        border-radius: 8px;
+        border-left: 4px solid #4CAF50;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="result-container">
+    <h1>📊 Результат сопоставления</h1>
+
+    <!-- Иконка результата -->
+    <div class="result-icon">
+        {% if success_rate >= 80 %}
+            🎉
+        {% elif success_rate >= 60 %}
+            👍
+        {% elif success_rate >= 40 %}
+            💪
+        {% else %}
+            📚
+        {% endif %}
+    </div>
+
+    <!-- Оценка в процентах -->
+    <div class="result-score
+        {% if success_rate >= 80 %}excellent
+        {% elif success_rate >= 60 %}good
+        {% elif success_rate >= 40 %}average
+        {% else %}poor{% endif %}">
+        {{ success_rate|floatformat:0 }}%
+    </div>
+
+    <!-- Прогресс-бар -->
+    <div class="progress-bar">
+        <div class="progress-fill" style="width: {{ success_rate }}%"></div>
+    </div>
+
+    <!-- Сообщение в зависимости от результата -->
+    <div class="result-message">
+        {% if success_rate >= 80 %}
+            <strong>Отлично!</strong> Вы прекрасно справились с заданием!
+        {% elif success_rate >= 60 %}
+            <strong>Хорошо!</strong> Отличный результат, продолжайте в том же духе!
+        {% elif success_rate >= 40 %}
+            <strong>Неплохо!</strong> Есть над чем поработать, но вы на правильном пути!
+        {% else %}
+            <strong>Продолжайте учиться!</strong> Каждая попытка делает вас лучше!
+        {% endif %}
+    </div>
+
+    <!-- Статистика -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">{{ correct_matches }}</div>
+            <div class="stat-label">Правильных пар</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ total_matches }}</div>
+            <div class="stat-label">Всего пар</div>
+        </div>
+    </div>
+
+    <!-- Ободряющее сообщение -->
+    <div class="encouragement">
+        <h3>💡 Советы для улучшения:</h3>
+        <p>
+            {% if success_rate < 60 %}
+                Попробуйте сначала изучать слова в обычном режиме тренировки,
+                затем возвращайтесь к сопоставлению.
+            {% else %}
+                Отличный прогресс! Продолжайте регулярные тренировки для закрепления результата.
+            {% endif %}
+        </p>
+    </div>
+
+    <!-- Кнопки навигации -->
+    <div>
+        <a href="{% url 'app_vocab:matching_game' %}" class="next-btn">
+            🔄 Новая игра
+        </a>
+        <a href="{% url 'app_vocab:multiple_choice_test' %}" class="next-btn">
+            🧪 Тест с выбором
+        </a>
+        <a href="/" class="next-btn primary">
+            🎓 Обычная тренировка
+        </a>
+    </div>
+
+    <!-- Дополнительная мотивация -->
+    <div style="margin-top: 30px; color: #666; font-size: 0.9em;">
+        <p>🎯 Каждая тренировка приближает вас к свободному владению языком!</p>
+    </div>
+</div>
+{% endblock %}

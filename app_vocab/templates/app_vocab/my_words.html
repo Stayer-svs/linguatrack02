@@ -96,9 +96,10 @@
         font-size: 0.8em;
         font-weight: bold;
     }
-    .badge-new { background: #ffeb3b; color: #333; }
-    .badge-learning { background: #2196F3; color: white; }
-    .badge-learned { background: #4CAF50; color: white; }
+    .badge-new { background: #ffeb3b; color: #333; }  /* желтый */
+    .badge-beginner { background: #2196F3; color: white; }  /* синий */
+    .badge-practicing { background: #FF9800; color: white; } /* оранжевый */
+    .badge-learned { background: #4CAF50; color: white; }  /* зеленый */
     .messages {
         margin: 20px 0;
     }
@@ -110,6 +111,25 @@
     .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
     .alert-info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
     .alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+    .sort-btn {
+    padding: 6px 12px;
+    margin: 0 2px;
+    background: #f8f9fa;
+    color: #333;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 0.9em;
+}
+.sort-btn:hover {
+    background: #e9ecef;
+}
+.sort-btn.active {
+    background: #2196F3;
+    color: white;
+    border-color: #2196F3;
+}
 </style>
 {% endblock %}
 
@@ -148,16 +168,24 @@
         </div>
     </div>
 
-    <!-- Заголовок с кнопкой -->
+    <!-- Заголовок с кнопками -->
     <div class="actions-header">
         <h2>Список слов</h2>
-        <a href="{% url 'app_vocab:add_word' %}" class="add-btn">
-            ➕ Добавить слово
-        </a>
+        <div>
+            <span style="margin-right: 10px;">Сортировка:</span>
+            <a href="?sort=date_added" class="sort-btn {% if current_sort == 'date_added' %}active{% endif %}">📅 По дате</a>
+            <a href="?sort=original" class="sort-btn {% if current_sort == 'original' %}active{% endif %}">🔤 По слову</a>
+            <a href="?sort=level" class="sort-btn {% if current_sort == 'level' %}active{% endif %}">🎯 По уровню</a>
+            <a href="?sort=next_review" class="sort-btn {% if current_sort == 'next_review' %}active{% endif %}">📆 По дате повтора</a>
+            <a href="{% url 'app_vocab:add_word' %}" class="add-btn">
+                ➕ Добавить слово
+            </a>
+        </div>
     </div>
 
     <!-- Таблица слов -->
     {% if user_words %}
+
         <table class="words-table">
             <thead>
                 <tr>
@@ -165,7 +193,7 @@
                     <th>Транскрипция</th>
                     <th>Перевод</th>
                     <th>Уровень</th>
-                    <th>След. повторение</th>
+                    <th>Следующее повторение</th>  <!-- ИЗМЕНИТЬ НАЗВАНИЕ -->
                     <th>Действия</th>
                 </tr>
             </thead>
@@ -184,13 +212,31 @@
                     <td>
                         <span class="knowledge-badge
                             {% if user_word.repetition == 0 %}badge-new
-                            {% elif user_word.repetition <= 3 %}badge-learning
+                            {% elif user_word.repetition == 1 %}badge-beginner
+                            {% elif user_word.repetition <= 3 %}badge-practicing
                             {% else %}badge-learned{% endif %}">
                             {{ user_word.get_knowledge_level }}
                         </span>
                     </td>
-                    <td>{{ user_word.next_review|date:"d.m.Y" }}</td>
+                    <td style="text-align: center;">
+
+                        <!-- КНОПКА "СЕЙЧАС" -->
+                        <div style="margin-bottom: 5px;">
+                            {{ user_word.next_review|date:"d.m.Y" }}
+                        </div>
+                        <!-- делаем кнопку "Сейчас" через AJAX (без перезагрузки страницы) -->
+                        <button type="button"
+                                class="btn review-now-btn"
+                                style="background: #ff9800; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8em;"
+                                data-word-id="{{ user_word.id }}"
+                                onclick="reviewNow(this)">
+                            🕐 Сейчас
+                        </button>
+
+                    </td>
+
                     <td>
+                        <!-- КНОПКА УДАЛЕНИЯ -->
                         <form method="post" action="{% url 'app_vocab:remove_word' user_word.id %}" style="display: inline;">
                             {% csrf_token %}
                             <button type="submit" class="delete-btn"
@@ -201,8 +247,52 @@
                     </td>
                 </tr>
                 {% endfor %}
+
+                <script>
+                function reviewNow(button) {
+                    const wordId = button.dataset.wordId;
+                    const originalText = button.textContent;
+
+                    // Показываем загрузку
+                    button.textContent = '⏳...';
+                    button.disabled = true;
+
+                    // Отправляем AJAX запрос
+                    fetch(`/my-words/review-now/${wordId}/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token }}',
+                            'Content-Type': 'application/json',
+                        },
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Обновляем дату на странице без перезагрузки
+                            const dateCell = button.parentElement;
+                            dateCell.querySelector('div').textContent = new Date().toLocaleDateString('ru-RU');
+
+                            // Показываем успех
+                            button.textContent = '✅ Готово!';
+                            setTimeout(() => {
+                                button.textContent = '🕐 Сейчас';
+                                button.disabled = false;
+                            }, 1000);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Ошибка:', error);
+                        button.textContent = '❌ Ошибка';
+                        setTimeout(() => {
+                            button.textContent = originalText;
+                            button.disabled = false;
+                        }, 1000);
+                    });
+                }
+                </script>
             </tbody>
         </table>
+
     {% else %}
         <div class="no-words">
             <h3>📝 Ваш словарь пуст</h3>

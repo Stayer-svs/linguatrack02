@@ -28,11 +28,16 @@ def get_or_create_user_word(user, word):
     return user_word
 
 
-def get_today_words(user, limit=20):
+def get_today_words(user, limit=None):
     """
-    Возвращает слова для повторения сегодня.
+    Возвращает слова для повторения сегодня с учетом настроек пользователя.
     """
     today = timezone.now()
+    profile = get_or_create_user_profile(user)
+
+    # Используем лимит из настроек, если не указан явно
+    if limit is None:
+        limit = profile.daily_review_limit
 
     # Слова, у которых next_review сегодня или раньше
     user_words = UserWord.objects.filter(
@@ -40,14 +45,14 @@ def get_today_words(user, limit=20):
         next_review__lte=today
     ).select_related('word')
 
-    # Если слов для повторения мало, добавляем новые
-    if user_words.count() < limit:
+    # Если слов для повторения мало, добавляем новые (с учетом настроек)
+    if user_words.count() < limit and profile.daily_new_words > 0:
         # Ищем слова, которые пользователь еще не добавлял
         user_word_ids = UserWord.objects.filter(user=user).values_list('word_id', flat=True)
         new_words = Word.objects.exclude(id__in=user_word_ids)
 
-        # Добавляем случайные новые слова
-        new_words_count = min(new_words.count(), limit - user_words.count())
+        # Добавляем новые слова согласно настройкам
+        new_words_count = min(new_words.count(), profile.daily_new_words, limit - user_words.count())
         if new_words_count > 0:
             selected_new_words = random.sample(list(new_words), new_words_count)
             for word in selected_new_words:
@@ -104,3 +109,38 @@ def get_user_statistics(user):
         'total_reviews': profile.total_reviews,
         'streak_days': profile.streak_days,
     }
+
+
+def get_words_for_games(user, min_words=6):
+    """
+    Получает слова для игр (берет слова не только по расписанию).
+    """
+    # Сначала пытаемся взять слова по расписанию
+    today_words = list(get_today_words(user, limit=20))
+
+    print(f"🎮 ДЛЯ ИГР: слов по расписанию: {len(today_words)}, нужно минимум: {min_words}")
+
+    # Если мало слов, добавляем случайные из всех слов пользователя
+    if len(today_words) < min_words:
+        all_user_words = UserWord.objects.filter(user=user).select_related('word')
+        additional_words = list(all_user_words)
+
+        # Перемешиваем и добавляем недостающие слова
+        random.shuffle(additional_words)
+        for word in additional_words:
+            if len(today_words) >= min_words * 2:  # Берем в 2 раза больше для пар
+                break
+            if word not in today_words:
+                today_words.append(word)
+
+    # Убираем дубликаты по ID слова
+    seen_ids = set()
+    unique_words = []
+    for user_word in today_words:
+        if user_word.word.id not in seen_ids:
+            seen_ids.add(user_word.word.id)
+            unique_words.append(user_word)
+
+    print(f"🎮 ДЛЯ ИГР: итого уникальных слов: {len(unique_words)}")
+
+    return unique_words[:12]  # Ограничим для удобства игры

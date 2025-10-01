@@ -119,6 +119,19 @@
 </div>
 {% endif %}
 
+<div class="daily-limits" style="background: #e8f5e8; padding: 12px; border-radius: 8px; margin: 15px 0; text-align: center; border: 2px solid #4CAF50;">
+    <strong>📅 Дневные лимиты:</strong>
+    <span style="margin: 0 15px;">🔄 Повторений: <strong>{{ statistics.today_words }}</strong>/{{ statistics.daily_review_limit }}</span>
+    <span>🆕 Новых слов: <strong>{{ statistics.available_new_words }}</strong>/{{ statistics.daily_new_words }}</span>
+</div>
+
+<!-- После блока с лимитами Пояснения -->
+<div style="background: #e3f2fd; padding: 10px; border-radius: 5px; margin: 10px 0; font-size: 0.9em;text-align: center;">
+    💡 Система показывает слова, которые нужно повторить сегодня.
+</div>
+
+
+
 <!-- Блок управления (реверс) -->
 <div class="controls">
     {% if is_reverse %}
@@ -165,6 +178,7 @@
                 <!-- Кнопка "Показать перевод" -->
                 <button class="btn show-btn" onclick="showAnswer({{ user_word.id }})">Показать ответ</button>
 
+
                 <!-- Кнопки "Знаю"/"Не знаю" (изначально скрыты) -->
                 <span id="knowledge-buttons-{{ user_word.id }}" style="display: none;">
                     <a href="?word_id={{ user_word.id }}&action=know{% if is_reverse %}&reverse=1{% endif %}">
@@ -190,7 +204,9 @@
         <p>На сегодня все слова повторены.</p>
         <p>Новые слова появятся согласно расписанию интервальных повторений.</p>
         {% if no_words_message %}
-            <p><em>{{ no_words_message }}</em></p>
+            <p><a href="{% url 'app_vocab:my_words' %}" style="color: #2196F3; text-decoration: none; font-weight: bold;">
+        ➕ Или добавьте слова кнопкой «Сейчас» на вкладке «Мои слова»
+    </a></p>
         {% endif %}
     </div>
 {% endif %}
