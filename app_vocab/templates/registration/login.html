@@ -1,0 +1,104 @@
+<!-- app_vocab/templates/registration/login.html -->
+{% extends "app_vocab/base.html" %}
+
+{% block title %}Вход{% endblock %}
+
+{% block extra_css %}
+<style>
+    .auth-container {
+        max-width: 400px;
+        margin: 50px auto;
+        padding: 30px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    .auth-title {
+        text-align: center;
+        color: #333;
+        margin-bottom: 30px;
+    }
+    .form-group {
+        margin-bottom: 20px;
+    }
+    .form-label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: bold;
+        color: #333;
+    }
+    .form-input {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 6px;
+        font-size: 1em;
+        box-sizing: border-box;
+    }
+    .form-input:focus {
+        border-color: #2196F3;
+        outline: none;
+    }
+    .submit-btn {
+        width: 100%;
+        padding: 15px;
+        background: #2196F3;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 1.1em;
+        cursor: pointer;
+        margin-top: 10px;
+    }
+    .submit-btn:hover {
+        background: #1976D2;
+    }
+    .auth-links {
+        text-align: center;
+        margin-top: 20px;
+    }
+    .auth-links a {
+        color: #2196F3;
+        text-decoration: none;
+    }
+    .error-list {
+        color: #f44336;
+        font-size: 0.9em;
+        margin-top: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <h1 class="auth-title">🔐 Вход в систему</h1>
+
+    {% if form.errors %}
+    <div class="error-list">
+        Неправильное имя пользователя или пароль.
+    </div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label for="id_username" class="form-label">👤 Имя пользователя</label>
+            <input type="text" name="username" id="id_username" class="form-input" required>
+        </div>
+
+        <div class="form-group">
+            <label for="id_password" class="form-label">🔑 Пароль</label>
+            <input type="password" name="password" id="id_password" class="form-input" required>
+        </div>
+
+        <button type="submit" class="submit-btn">
+            ✅ Войти
+        </button>
+    </form>
+
+    <div class="auth-links">
+        <p>Нет аккаунта? <a href="{% url 'app_vocab:register' %}">Зарегистрироваться</a></p>
+    </div>
+</div>
+{% endblock %}

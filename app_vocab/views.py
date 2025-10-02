@@ -4,6 +4,9 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib import messages
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth import login
+
 from django.utils import timezone
 from django.http import JsonResponse
 from .models import Word, UserWord
@@ -419,3 +422,26 @@ def review_now(request, word_id):
 
 #   messages.success(request, f'Слово "{user_word.word.original}" будет повторено в ближайшей тренировке!')
 #   return redirect('app_vocab:my_words')
+
+def register(request):
+    """
+    Регистрация нового пользователя.
+    """
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+
+            # Автоматически логиним пользователя после регистрации
+            login(request, user)
+
+            # Создаем профиль пользователя
+            from .services import get_or_create_user_profile
+            get_or_create_user_profile(user)
+
+            messages.success(request, 'Регистрация прошла успешно! Добро пожаловать!')
+            return redirect('app_vocab:word_list')
+    else:
+        form = UserCreationForm()
+
+    return render(request, 'registration/register.html', {'form': form})

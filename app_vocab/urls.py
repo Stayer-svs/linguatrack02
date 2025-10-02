@@ -28,4 +28,5 @@ urlpatterns = [
     path('test/check-matching/', views.check_matching, name='check_matching'),
     path('settings/', views.settings_page, name='settings'),
     path('my-words/review-now/<int:word_id>/', views.review_now, name='review_now'),
+    path('register/', views.register, name='register'),
 ]

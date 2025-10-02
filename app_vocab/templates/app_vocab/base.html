@@ -75,15 +75,40 @@
         @media (max-width: 768px) {
             .nav-container {
                 flex-direction: column;
-            }
+        }
 
-            .nav-menu {
-                margin-top: 1rem;
-            }
+        .nav-menu {
+            margin-top: 1rem;
+        }
 
-            .nav-item {
-                margin: 0 0.5rem;
-            }
+        .nav-item {
+            margin: 0 0.5rem;
+        }
+        }
+            .auth-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-left: auto;
+        }
+
+        .user-info {
+            color: #333;
+            font-weight: bold;
+        }
+
+        .nav-link {
+            color: #007bff;
+            text-decoration: none;
+            padding: 8px 15px;
+            border: 1px solid #007bff;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+
+        .nav-link:hover {
+            background-color: #007bff;
+            color: white;
         }
     </style>
     {% block extra_css %}{% endblock %}
@@ -135,6 +160,17 @@
     </li>
 </ul>
         </div>
+        <div class="auth-section">
+                {% if user.is_authenticated %}
+                    <!-- Если пользователь вошел -->
+                    <span class="user-info">👤 {{ user.username }}</span>
+                    <a href="{% url 'logout' %}" class="nav-link">🚪 Выйти</a>
+                {% else %}
+                    <!-- Если пользователь не авторизован -->
+                    <a href="{% url 'login' %}" class="nav-link">🔐 Войти</a>
+                    <a href="{% url 'app_vocab:register' %}" class="nav-link">📝 Регистрация</a>
+                {% endif %}
+            </div>
     </nav>
 
     <!-- Основной контент -->
