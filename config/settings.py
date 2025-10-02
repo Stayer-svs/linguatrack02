@@ -11,10 +11,6 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
-
-# config/settings.py
-# ... другие импорты ...
-from pathlib import Path
 from dotenv import load_dotenv  # Импортируем функцию для загрузки .env
 import os
 
@@ -23,23 +19,21 @@ load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-# ...
-
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-iiama6j_0pat^efg=b3r+@074n%uts7-l^atr-!5#gg#c=(66w'
+# SECRET_KEY = 'django-insecure-iiama6j_0pat^efg=b3r+@074n%uts7-l^atr-!5#gg#c=(66w'
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-dev-key-12345')
+
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
 ALLOWED_HOSTS = []
-
 
 # Application definition
 

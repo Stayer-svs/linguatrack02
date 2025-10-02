@@ -15,54 +15,83 @@
         }
 
         /* Навигационная панель */
-        .navbar {
-            background-color: #343a40;
-            padding: 1rem 0;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
 
-        .nav-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 20px;
-        }
+/* НАВИГАЦИЯ - ОБНОВЛЕННЫЕ СТИЛИ */
+.navbar {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    padding: 15px 30px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1) !important;
+}
 
-        .nav-brand {
-            color: white;
-            font-size: 1.5rem;
-            font-weight: bold;
-            text-decoration: none;
-        }
+.navbar .nav-brand {
+    font-size: 1.5em !important;
+    font-weight: bold !important;
+    color: white !important;
+    margin-right: 30px !important;
+}
 
-        .nav-menu {
-            display: flex;
-            list-style: none;
-            margin: 0;
-            padding: 0;
-        }
+.navbar .nav-links {
+    display: flex !important;
+    gap: 20px !important;
+    flex-wrap: wrap !important;
+}
 
-        .nav-item {
-            margin-left: 2rem;
-        }
+.navbar .auth-section {
+    display: flex !important;
+    align-items: center !important;
+    gap: 15px !important;
+}
 
-        .nav-link {
-            color: white;
-            text-decoration: none;
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
-            transition: background-color 0.3s;
-        }
+/* ОСНОВНЫЕ ССЫЛКИ МЕНЮ - ТЕПЕРЬ СПЕЦИФИЧНЫЕ */
+.navbar .nav-link {
+    color: white !important;
+    text-decoration: none !important;
+    padding: 10px 20px !important;
+    border-radius: 25px !important;
+    transition: all 0.3s ease !important;
+    font-weight: 500 !important;
+    border: 2px solid rgba(255, 255, 255, 0.3) !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    display: inline-block !important;
+}
 
-        .nav-link:hover {
-            background-color: #495057;
-        }
+.navbar .nav-link:hover {
+    background: rgba(255, 255, 255, 0.3) !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2) !important;
+}
 
-        .nav-link.active {
-            background-color: #007bff;
-        }
+/* СТИЛИ ДЛЯ ИМЕНИ ПОЛЬЗОВАТЕЛЯ */
+.navbar .user-info {
+    color: white !important;
+    font-weight: bold !important;
+    margin-right: 10px !important;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5) !important;
+}
+
+/* ОСОБЫЕ СТИЛИ ДЛЯ КНОПОК АУТЕНТИФИКАЦИИ */
+.navbar .login-btn {
+    background: rgba(76, 175, 80, 0.8) !important;
+}
+
+.navbar .register-btn {
+    background: rgba(33, 150, 243, 0.8) !important;
+}
+
+.navbar .logout-btn {
+    background: rgba(244, 67, 54, 0.8) !important;
+}
+
+.navbar .login-btn:hover,
+.navbar .register-btn:hover,
+.navbar .logout-btn:hover {
+    background: rgba(255, 255, 255, 0.9) !important;
+    color: #333 !important;
+}
 
         /* Основной контент */
         .container {
@@ -115,63 +144,28 @@
 </head>
 <body>
     <!-- Навигационная панель -->
-    <nav class="navbar">
-        <div class="nav-container">
-            <a href="/" class="nav-brand">🗣️ Vocabulary Trainer</a>
-<ul class="nav-menu">
-    <li class="nav-item">
-        <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}">
-            📖 Тренировка
-        </a>
-    </li>
-    <li class="nav-item">
-        <a href="{% url 'app_vocab:my_words' %}"
-           class="nav-link {% if request.path == '/my-words/' %}active{% endif %}">
-            📒 Мои слова
-        </a>
-    </li>
-    <li class="nav-item">
-        <a href="{% url 'app_vocab:multiple_choice_test' %}"
-           class="nav-link {% if request.path == '/test/multiple-choice/' %}active{% endif %}">
-            🔘 Тест с выбором
-        </a>
-    </li>
-    <li class="nav-item">
-        <a href="{% url 'app_vocab:matching_game' %}"
-           class="nav-link {% if request.path == '/test/matching/' %}active{% endif %}">
-            🔄 Сопоставление
-        </a>
-    </li>
-    <li class="nav-item">
-        <a href="/statistics/" class="nav-link {% if request.path == '/statistics/' %}active{% endif %}">
-            📈 Статистика
-        </a>
-    </li>
-    <li class="nav-item">
-        <a href="{% url 'app_vocab:settings' %}"
-           class="nav-link {% if request.path == '/settings/' %}active{% endif %}">
-            ⚙️ Настройки
-        </a>
-    </li>
-    <li class="nav-item">
-        <a href="/admin/" class="nav-link">
-            🛠️ Админка
-        </a>
-    </li>
-</ul>
-        </div>
-        <div class="auth-section">
-                {% if user.is_authenticated %}
-                    <!-- Если пользователь вошел -->
-                    <span class="user-info">👤 {{ user.username }}</span>
-                    <a href="{% url 'logout' %}" class="nav-link">🚪 Выйти</a>
-                {% else %}
-                    <!-- Если пользователь не авторизован -->
-                    <a href="{% url 'login' %}" class="nav-link">🔐 Войти</a>
-                    <a href="{% url 'app_vocab:register' %}" class="nav-link">📝 Регистрация</a>
-                {% endif %}
-            </div>
-    </nav>
+<nav class="navbar">
+    <div class="nav-brand">
+        Vocabulary Trainer <!-- Убрали иконку 🗣️ -->
+    </div>
+
+    <div class="nav-links">
+        <a href="{% url 'app_vocab:word_list' %}" class="nav-link">Мои слова</a>
+        {% if user.is_staff %}
+        <a href="{% url 'admin:index' %}" class="nav-link">Админка</a>
+        {% endif %}
+    </div>
+
+    <div class="auth-section">
+        {% if user.is_authenticated %}
+            <span class="user-info">{{ user.username }}</span>
+            <a href="{% url 'logout' %}" class="nav-link logout-btn">Выйти</a>
+        {% else %}
+            <a href="{% url 'login' %}" class="nav-link login-btn">Войти</a>
+            <a href="{% url 'app_vocab:register' %}" class="nav-link register-btn">Регистрация</a>
+        {% endif %}
+    </div>
+</nav>
 
     <!-- Основной контент -->
     <div class="container">
