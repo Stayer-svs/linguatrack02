@@ -11,8 +11,12 @@ urlpatterns = [
     # Подключаем все маршруты из приложения app_vocab.
     # Теперь все URL-ы из app_vocab/urls.py будут доступны по корню сайта (/).
     path('', include('app_vocab.urls')),
+    # АУТЕНТИФИКАЦИЯ
     path('accounts/login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
-    path('accounts/logout/', auth_views.LogoutView.as_view(), name='logout'),
+    path('accounts/logout/', auth_views.LogoutView.as_view(next_page='/'), name='logout'),
     path('accounts/register/', include('app_vocab.urls')),  # Наша кастомная регистрация
+    path('admin/', admin.site.urls),
+    path('', include('app_vocab.urls')),
 
 ]
+

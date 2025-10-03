@@ -11,6 +11,8 @@ urlpatterns = [
     # views.word_list - это функция, которая будет обрабатывать запрос.
     # name='word_list' - это имя маршрута, чтобы можно было ссылаться на него в коде.
     path('', views.word_list, name='word_list'),
+    path('register/', views.register, name='register'),
+
     path('statistics/', views.statistics, name='statistics'),
     path('', views.word_list, name='word_list'),
     path('statistics/', views.statistics, name='statistics'),
@@ -28,5 +30,5 @@ urlpatterns = [
     path('test/check-matching/', views.check_matching, name='check_matching'),
     path('settings/', views.settings_page, name='settings'),
     path('my-words/review-now/<int:word_id>/', views.review_now, name='review_now'),
-    path('register/', views.register, name='register'),
+
 ]
