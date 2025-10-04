@@ -485,27 +485,35 @@ def import_words_csv(request):
             reader = csv.DictReader(decoded_file)
 
             imported_count = 0
+            duplicate_count = 0
+
             for row in reader:
+                original = row.get('Слово', '').strip()
+                translation = row.get('Перевод', '').strip()
+
+                if not original or not translation:
+                    continue
+
                 # ПРОВЕРЯЕМ, не существует ли уже такое слово у пользователя
                 existing_word = Word.objects.filter(
-                    original=row.get('Слово', '').strip(),
-                    userword__user=request.user  # ПРОВЕРКА ПОЛЬЗОВАТЕЛЯ
+                    original=original,
+                    userword__user=request.user
                 ).first()
 
                 if existing_word:
-                    continue  # Пропускаем дубликаты
+                    duplicate_count += 1
+                    continue
 
                 # Создаем новое слово
                 word = Word.objects.create(
-                    original=row.get('Слово', '').strip(),
-                    translation=row.get('Перевод', '').strip(),
+                    original=original,
+                    translation=translation,
                     transcription=row.get('Транскрипция', '').strip(),
                     example_sentence=row.get('Пример', '').strip(),
                     difficulty_level=0,
                 )
 
                 # Создаем связь с пользователем
-                from .models import UserWord
                 UserWord.objects.create(
                     user=request.user,
                     word=word
@@ -513,7 +521,11 @@ def import_words_csv(request):
 
                 imported_count += 1
 
-            messages.success(request, f'Успешно импортировано {imported_count} слов!')
+            if duplicate_count > 0:
+                messages.warning(request,
+                                 f'Импортировано {imported_count} слов. Пропущено {duplicate_count} дубликатов.')
+            else:
+                messages.success(request, f'Успешно импортировано {imported_count} слов!')
 
         except Exception as e:
             messages.error(request, f'Ошибка при импорте: {str(e)}')
