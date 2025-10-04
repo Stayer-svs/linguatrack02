@@ -137,6 +137,48 @@
 <div class="words-container">
     <h1>📚 Мой Словарь</h1>
 
+    <!-- КНОПКИ ЭКСПОРТА/ИМПОРТА -->
+<div class="import-export-buttons" style="margin: 20px 0; display: flex; gap: 15px;">
+    <a href="{% url 'app_vocab:export_words' %}" class="btn btn-export">
+        📤 Экспорт в CSV
+    </a>
+    <a href="{% url 'app_vocab:import_words' %}" class="btn btn-import">
+        📥 Импорт из CSV
+    </a>
+</div>
+
+<style>
+.btn {
+    display: inline-block;
+    padding: 12px 25px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: all 0.3s;
+    border: 2px solid transparent;
+}
+
+.btn-export {
+    background: #4CAF50;
+    color: white;
+}
+
+.btn-export:hover {
+    background: #45a049;
+    transform: translateY(-2px);
+}
+
+.btn-import {
+    background: #2196F3;
+    color: white;
+}
+
+.btn-import:hover {
+    background: #1976D2;
+    transform: translateY(-2px);
+}
+</style>
+
     <!-- Сообщения -->
     {% if messages %}
     <div class="messages">

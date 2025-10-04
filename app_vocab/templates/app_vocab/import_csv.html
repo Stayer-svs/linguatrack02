@@ -1,0 +1,134 @@
+{% extends "app_vocab/base.html" %}
+
+{% block title %}Импорт слов{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>📥 Импорт слов из CSV</h1>
+
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="import-form">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label for="csv_file" class="form-label">Выберите CSV файл:</label>
+                <input type="file" name="csv_file" id="csv_file" accept=".csv" required class="form-input">
+            </div>
+
+            <button type="submit" class="submit-btn">📤 Импортировать слова</button>
+        </form>
+    </div>
+
+
+    <div class="help-section">
+
+            <h3>📋 Формат CSV файла:</h3>
+            <p>Файл должен содержать столбцы: <strong>Слово, Перевод, Транскрипция, Пример, Уровень сложности, Дата добавления</strong></p>
+            <p>Пример:</p>
+            <pre>
+            Слово,Перевод,Транскрипция,Пример,Уровень сложности,Дата добавления
+            hello,привет,həˈloʊ,"Hello, world!",Новичок,2024-01-15
+            book,книга,bʊk,I read a book,Средний,2024-01-20
+            </pre>
+
+        <p>
+            <a href="{% url 'app_vocab:export_words' %}" class="nav-link">
+                📤 Скачать шаблон CSV файла
+            </a>
+        </p>
+    </div>
+
+
+</div>
+
+<style>
+.container {
+    max-width: 800px;
+    margin: 30px auto;
+    padding: 20px;
+}
+
+.import-form {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #333;
+}
+
+.form-input {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #ddd;
+    border-radius: 5px;
+    font-size: 1em;
+}
+
+.submit-btn {
+    background: #4CAF50;
+    color: white;
+    padding: 12px 30px;
+    border: none;
+    border-radius: 5px;
+    font-size: 1.1em;
+    cursor: pointer;
+}
+
+.submit-btn:hover {
+    background: #45a049;
+}
+
+.help-section {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 10px;
+}
+
+.help-section pre {
+    background: #2d2d2d;
+    color: #f8f8f2;
+    padding: 15px;
+    border-radius: 5px;
+    overflow-x: auto;
+}
+
+.alert {
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+}
+
+.alert-success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.alert-error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+</style>
+{% endblock %}

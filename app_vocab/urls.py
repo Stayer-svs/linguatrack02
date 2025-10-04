@@ -31,4 +31,7 @@ urlpatterns = [
     path('settings/', views.settings_page, name='settings'),
     path('my-words/review-now/<int:word_id>/', views.review_now, name='review_now'),
 
+    path('export-words/', views.export_words_csv, name='export_words'),
+    path('import-words/', views.import_words_csv, name='import_words'),
+
 ]

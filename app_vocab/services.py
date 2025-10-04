@@ -98,7 +98,8 @@ def get_user_statistics(user):
     learning_words = user_words.filter(repetition__range=[1, 3]).count()
     learned_words = user_words.filter(repetition__gte=4).count()
 
-    today_words = get_today_words(user).count()
+   # today_words = get_today_words(user).count()
+    today_words = len(get_today_words(user))
 
     return {
         'total_words': total_words,

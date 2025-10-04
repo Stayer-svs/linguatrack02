@@ -1,5 +1,7 @@
 # app_vocab/views.py
 
+import csv
+from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -18,6 +20,12 @@ def word_list(request):
     """
     Главная страница-тренажер с системой интервальных повторений.
     """
+    # ФИЛЬТРУЕМ СЛОВА ТЕКУЩЕГО ПОЛЬЗОВАТЕЛЯ
+    words_for_review = Word.objects.filter(
+        userword__user=request.user,  # ДОБАВИТЬ ЭТОТ ФИЛЬТР
+        userword__next_review__lte=timezone.now()
+    ).order_by('userword__next_review')[:10]
+
     # Получаем параметры из URL
     is_reverse = request.GET.get('reverse', '0') == '1'
     word_id = request.GET.get('word_id')
@@ -193,6 +201,7 @@ def my_words(request):
     # Получаем параметр сортировки из GET запроса
     sort_by = request.GET.get('sort', 'date_added')  # по умолчанию по дате добавления
 
+    # ФИЛЬТРУЕМ СЛОВА ТЕКУЩЕГО ПОЛЬЗОВАТЕЛЯ - ИСПРАВЛЕННАЯ СТРОКА
     user_words = UserWord.objects.filter(user=request.user).select_related('word')
 
     # Применяем сортировку
@@ -206,7 +215,6 @@ def my_words(request):
         user_words = user_words.order_by('next_review')
     else:  # date_added (по умолчанию)
         user_words = user_words.order_by('-date_added')
-
 
     # Статистика по словам пользователя
     words_stats = {
@@ -226,48 +234,45 @@ def my_words(request):
 
 @login_required
 def add_word(request):
-    """
-    Добавление нового слова пользователем.
-    """
+    """Добавление нового слова пользователя"""
     if request.method == 'POST':
-        original = request.POST.get('original')
-        transcription = request.POST.get('transcription', '')
-        translation = request.POST.get('translation')
+        original = request.POST.get('original', '').strip()
+        translation = request.POST.get('translation', '').strip()
+        transcription = request.POST.get('transcription', '').strip()
+        example_sentence = request.POST.get('example_sentence', '').strip()
 
         if original and translation:
-            # Создаем или получаем слово
-            word, created = Word.objects.get_or_create(
-                original=original.strip(),
-                defaults={
-                    'transcription': transcription.strip(),
-                    'translation': translation.strip(),
-                }
+            # ПРОВЕРЯЕМ, не существует ли уже такое слово у пользователя
+            existing_word = Word.objects.filter(
+                original=original,
+                userword__user=request.user  # ПРОВЕРКА ПОЛЬЗОВАТЕЛЯ
+            ).first()
+
+            if existing_word:
+                messages.error(request, f'Слово "{original}" уже есть в вашем словаре!')
+                return redirect('app_vocab:my_words')
+
+            # Создаем новое слово
+            word = Word.objects.create(
+                original=original,
+                translation=translation,
+                transcription=transcription,
+                example_sentence=example_sentence,
+                difficulty_level=0,
             )
 
-            # Если слово уже существует, но пользователь хочет свою версию
-            if not created:
-                # Можно обновить транскрипцию, если она отличается
-                if transcription and word.transcription != transcription:
-                    word.transcription = transcription
-                    word.save()
-
-            # Связываем слово с пользователем
-            user_word, user_word_created = UserWord.objects.get_or_create(
+            # Создаем связь с пользователем
+            UserWord.objects.create(
                 user=request.user,
                 word=word
             )
 
-            if user_word_created:
-                messages.success(request, f'Слово "{original}" добавлено в ваш словарь!')
-            else:
-                messages.info(request, f'Слово "{original}" уже есть в вашем словаре.')
-
+            messages.success(request, f'Слово "{original}" успешно добавлено!')
             return redirect('app_vocab:my_words')
         else:
-            messages.error(request, 'Заполните обязательные поля: слово и перевод.')
+            messages.error(request, 'Заполните обязательные поля: слово и перевод')
 
     return render(request, 'app_vocab/add_word.html')
-
 
 @login_required
 def remove_word(request, word_id):
@@ -445,3 +450,74 @@ def register(request):
         form = UserCreationForm()
 
     return render(request, 'registration/register.html', {'form': form})
+
+###
+def export_words_csv(request):
+    """Экспорт слов пользователя в CSV"""
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="my_dictionary.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(['Слово', 'Перевод', 'Транскрипция', 'Пример', 'Уровень сложности', 'Дата добавления'])
+
+    # ИСПРАВЛЕННЫЙ ЗАПРОС - через userword
+    words = Word.objects.filter(userword__user=request.user)
+
+    for word in words:
+        writer.writerow([
+            word.original,
+            word.translation,
+            word.transcription or '',
+            word.example_sentence or '',
+            word.get_difficulty_level_display(),
+            word.date_added.strftime('%Y-%m-%d') if word.date_added else ''
+        ])
+
+    return response
+###
+def import_words_csv(request):
+    """Импорт слов из CSV файла"""
+    if request.method == 'POST' and request.FILES.get('csv_file'):
+        csv_file = request.FILES['csv_file']
+
+        try:
+            decoded_file = csv_file.read().decode('utf-8').splitlines()
+            reader = csv.DictReader(decoded_file)
+
+            imported_count = 0
+            for row in reader:
+                # ПРОВЕРЯЕМ, не существует ли уже такое слово у пользователя
+                existing_word = Word.objects.filter(
+                    original=row.get('Слово', '').strip(),
+                    userword__user=request.user  # ПРОВЕРКА ПОЛЬЗОВАТЕЛЯ
+                ).first()
+
+                if existing_word:
+                    continue  # Пропускаем дубликаты
+
+                # Создаем новое слово
+                word = Word.objects.create(
+                    original=row.get('Слово', '').strip(),
+                    translation=row.get('Перевод', '').strip(),
+                    transcription=row.get('Транскрипция', '').strip(),
+                    example_sentence=row.get('Пример', '').strip(),
+                    difficulty_level=0,
+                )
+
+                # Создаем связь с пользователем
+                from .models import UserWord
+                UserWord.objects.create(
+                    user=request.user,
+                    word=word
+                )
+
+                imported_count += 1
+
+            messages.success(request, f'Успешно импортировано {imported_count} слов!')
+
+        except Exception as e:
+            messages.error(request, f'Ошибка при импорте: {str(e)}')
+
+        return redirect('app_vocab:my_words')
+
+    return render(request, 'app_vocab/import_csv.html')

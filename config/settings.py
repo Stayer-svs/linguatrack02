@@ -24,7 +24,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-# SECRET_KEY = 'django-insecure-iiama6j_0pat^efg=b3r+@074n%uts7-l^atr-!5#gg#c=(66w'
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-dev-key-12345')
 
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
