@@ -135,16 +135,21 @@
 
 {% block content %}
 <div class="words-container">
+<!-- ЗАГОЛОВОК И КНОПКИ В ОДНОЙ СТРОКЕ -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin: 20px 0;">
     <h1>📚 Мой Словарь</h1>
 
-    <!-- КНОПКИ ЭКСПОРТА/ИМПОРТА -->
-<div class="import-export-buttons" style="margin: 20px 0; display: flex; gap: 15px;">
-    <a href="{% url 'app_vocab:export_words' %}" class="btn btn-export">
-        📤 Экспорт в CSV
-    </a>
-    <a href="{% url 'app_vocab:import_words' %}" class="btn btn-import">
-        📥 Импорт из CSV
-    </a>
+    <div class="import-export-buttons" style="display: flex; gap: 15px;">
+        <a href="{% url 'app_vocab:export_words' %}" class="btn btn-export">
+            📤 Экспорт в CSV
+        </a>
+        <a href="{% url 'app_vocab:import_words' %}" class="btn btn-import">
+            📥 Импорт из CSV
+        </a>
+        <a href="{% url 'app_vocab:add_word' %}" class="btn btn-primary">
+            ➕ Добавить слово
+        </a>
+    </div>
 </div>
 
 <style>
@@ -176,6 +181,17 @@
 .btn-import:hover {
     background: #1976D2;
     transform: translateY(-2px);
+}
+
+.btn-primary {
+    background: #808080 !important;  /* Серый */
+    color: white !important;
+    border: 2px solid transparent !important;
+}
+
+.btn-primary:hover {
+    background: #696969 !important;
+    transform: translateY(-2px) !important;
 }
 </style>
 
@@ -219,9 +235,7 @@
             <a href="?sort=original" class="sort-btn {% if current_sort == 'original' %}active{% endif %}">🔤 По слову</a>
             <a href="?sort=level" class="sort-btn {% if current_sort == 'level' %}active{% endif %}">🎯 По уровню</a>
             <a href="?sort=next_review" class="sort-btn {% if current_sort == 'next_review' %}active{% endif %}">📆 По дате повтора</a>
-            <a href="{% url 'app_vocab:add_word' %}" class="add-btn">
-                ➕ Добавить слово
-            </a>
+            <!-- <a href="{% url 'app_vocab:add_word' %}" class="add-btn"> ➕ Добавить слово </a> -->
         </div>
     </div>
 

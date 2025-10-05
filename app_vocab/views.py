@@ -458,7 +458,7 @@ def export_words_csv(request):
     response['Content-Disposition'] = 'attachment; filename="my_dictionary.csv"'
 
     writer = csv.writer(response)
-    writer.writerow(['Слово', 'Перевод', 'Транскрипция', 'Пример', 'Уровень сложности', 'Дата добавления'])
+    writer.writerow(['Слово', 'Транскрипция', 'Перевод', 'Уровень сложности', 'Дата добавления'])
 
     # ИСПРАВЛЕННЫЙ ЗАПРОС - через userword
     words = Word.objects.filter(userword__user=request.user)
@@ -466,9 +466,8 @@ def export_words_csv(request):
     for word in words:
         writer.writerow([
             word.original,
-            word.translation,
             word.transcription or '',
-            word.example_sentence or '',
+            word.translation,
             word.get_difficulty_level_display(),
             word.date_added.strftime('%Y-%m-%d') if word.date_added else ''
         ])
@@ -509,7 +508,7 @@ def import_words_csv(request):
                     original=original,
                     translation=translation,
                     transcription=row.get('Транскрипция', '').strip(),
-                    example_sentence=row.get('Пример', '').strip(),
+                   #example_sentence=row.get('Пример', '').strip(),
                     difficulty_level=0,
                 )
 
