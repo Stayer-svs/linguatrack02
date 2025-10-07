@@ -102,7 +102,7 @@
             {% endif %}
         </div>
 
-        <form method="post" action="{% url 'app_vocab:check_multiple_choice' %}" id="test-form">
+        <form method="post" action="{% url 'app_vocab:check-answer' %}" id="test-form">
             {% csrf_token %}
             <input type="hidden" name="correct_answer" value="{{ correct_answer_id }}">
             <input type="hidden" name="question_word_id" value="{{ question_word.id }}">
@@ -134,23 +134,93 @@
 
 {% block extra_js %}
 <script>
+document.addEventListener('DOMContentLoaded', function() {
     let selectedAnswerId = null;
 
-    function selectAnswer(answerId, button) {
-        // Сбрасываем выделение у всех кнопок
+    window.selectAnswer = function(answerId, button) {
         document.querySelectorAll('.option-btn').forEach(btn => {
             btn.classList.remove('selected');
         });
 
-        // Выделяем выбранную кнопку
         button.classList.add('selected');
-
-        // Сохраняем выбранный ответ
         selectedAnswerId = answerId;
         document.getElementById('selected-answer').value = answerId;
-
-        // Активируем кнопку отправки
         document.getElementById('submit-btn').disabled = false;
+    };
+
+    document.getElementById('test-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        if (!selectedAnswerId) {
+            alert('Пожалуйста, выберите ответ');
+            return;
+        }
+
+        const formData = new FormData(this);
+        formData.append('user_answer', selectedAnswerId);
+        formData.append('correct_answer', document.querySelector('input[name="correct_answer"]').value);
+
+        console.log('Отправляемые данные:');
+        for (let [key, value] of formData.entries()) {
+            console.log(key + ': ' + value);
+        }
+
+        fetch(this.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Ответ сервера:', data);
+            if (data.error) {
+                alert('Ошибка: ' + data.error);
+                return;
+            }
+            showTestResult(data);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Произошла ошибка при проверке ответа');
+        });
+    });
+
+    function showTestResult(data) {
+        let resultHtml = '';
+
+        if (data.correct) {
+            resultHtml = `
+                <div style="text-align: center; padding: 20px;">
+                    <div style="font-size: 3em;">✅</div>
+                    <h3 style="color: #4CAF50;">${data.message}</h3>
+                    <p><strong>Правильный ответ:</strong> ${data.correct_answer}</p>
+                </div>
+            `;
+        } else {
+            resultHtml = `
+                <div style="text-align: center; padding: 20px;">
+                    <div style="font-size: 3em;">❌</div>
+                    <h3 style="color: #f44336;">${data.message}</h3>
+                    <p><strong>Ваш ответ:</strong> ${data.user_answer || 'не выбран'}</p>
+                    <p><strong>Правильный ответ:</strong> ${data.correct_answer}</p>
+                </div>
+            `;
+        }
+
+        document.querySelector('.container').innerHTML = resultHtml + `
+            <div style="text-align: center; margin-top: 30px;">
+                <a href="{% url 'app_vocab:multiple_choice_test' %}" class="nav-link" style="display: inline-block; margin: 0 10px;">
+                    🔄 Следующий вопрос
+                </a>
+                <a href="{% url 'app_vocab:word_list' %}" class="nav-link" style="display: inline-block; margin: 0 10px;">
+                    🎓 Обычная тренировка
+                </a>
+            </div>
+        `;
     }
+});
 </script>
 {% endblock %}

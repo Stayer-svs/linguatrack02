@@ -80,9 +80,7 @@ def statistics(request):
     return render(request, 'app_vocab/statistics.html', {'statistics': stats})
 
 
-# app_vocab/views.py (добавьте в конец файла)
 
-###
 @login_required
 def multiple_choice_test(request):
     """
@@ -131,68 +129,46 @@ def multiple_choice_test(request):
     }
 
     return render(request, 'app_vocab/multiple_choice.html', context)
-###
-    # Выбираем случайное слово для вопроса
-    question_word = random.choice(today_words)
-
-    # Создаем варианты ответов
-    all_words = list(Word.objects.exclude(id=question_word.word.id))
-    wrong_answers = random.sample(all_words, min(3, len(all_words)))
-
-    # Собираем все варианты (правильный + неправильные)
-    options = [question_word.word] + wrong_answers
-    random.shuffle(options)  # Перемешиваем варианты
-
-    # Определяем правильный ответ
-    correct_answer_id = question_word.word.id
-
-    context = {
-        'question_word': question_word,
-        'options': options,
-        'correct_answer_id': correct_answer_id,
-        'total_questions': len(today_words),
-    }
-
-    return render(request, 'app_vocab/multiple_choice.html', context)
 
 
 @login_required
 def check_multiple_choice(request):
-    """
-    Проверка ответа в тесте с множественным выбором.
-    """
+    """Проверка ответа в тесте с выбором (AJAX)"""
     if request.method == 'POST':
-        selected_answer_id = request.POST.get('selected_answer')
-        correct_answer_id = request.POST.get('correct_answer')
-        question_word_id = request.POST.get('question_word_id')
+        try:
+            user_answer = request.POST.get('user_answer')
+            correct_answer = request.POST.get('correct_answer')
 
-        # Проверяем ответ
-        is_correct = int(selected_answer_id) == int(correct_answer_id)
+            if not user_answer or not correct_answer:
+                return JsonResponse({'error': 'Missing answer data'})
 
-        # Обновляем прогресс пользователя
-        if is_correct and question_word_id:
-            try:
-                user_word = UserWord.objects.get(
-                    id=question_word_id,
-                    user=request.user
-                )
-                process_user_answer(user_word, quality=4)  # "Знал легко"
-            except UserWord.DoesNotExist:
-                pass
+            is_correct = (user_answer == correct_answer)
 
-        context = {
-            'is_correct': is_correct,
-            'selected_answer_id': int(selected_answer_id),
-            'correct_answer_id': int(correct_answer_id),
-        }
+            correct_word = Word.objects.get(id=correct_answer)
 
-        return render(request, 'app_vocab/test_result.html', context)
+            if is_correct:
+                return JsonResponse({
+                    'correct': True,
+                    'message': 'Правильно! Отличная работа! 🎉',
+                    'correct_answer': correct_word.translation
+                })
+            else:
+                user_answer_word = Word.objects.get(id=user_answer)
+                return JsonResponse({
+                    'correct': False,
+                    'message': 'Попробуйте еще раз! 💪',
+                    'correct_answer': correct_word.translation,
+                    'user_answer': user_answer_word.translation
+                })
 
-    return redirect('app_vocab:multiple_choice_test')
+        except Word.DoesNotExist:
+            return JsonResponse({'error': 'Word not found'})
+        except Exception as e:
+            return JsonResponse({'error': str(e)})
 
+    return JsonResponse({'error': 'Invalid request method'})
 
-# app_vocab/views.py (добавьте в конец)
-
+###
 @login_required
 def my_words(request):
     """
@@ -473,7 +449,9 @@ def export_words_csv(request):
         ])
 
     return response
+
 ###
+
 def import_words_csv(request):
     """Импорт слов из CSV файла"""
     if request.method == 'POST' and request.FILES.get('csv_file'):

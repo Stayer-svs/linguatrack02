@@ -12,17 +12,9 @@ urlpatterns = [
     # name='word_list' - это имя маршрута, чтобы можно было ссылаться на него в коде.
     path('', views.word_list, name='word_list'),
     path('register/', views.register, name='register'),
-
-    path('statistics/', views.statistics, name='statistics'),
-    path('', views.word_list, name='word_list'),
     path('statistics/', views.statistics, name='statistics'),
     path('test/multiple-choice/', views.multiple_choice_test, name='multiple_choice_test'),
-    path('test/check-answer/', views.check_multiple_choice, name='check_multiple_choice'),
-    path('', views.word_list, name='word_list'),
-    path('statistics/', views.statistics, name='statistics'),
-    path('test/multiple-choice/', views.multiple_choice_test, name='multiple_choice_test'),
-    path('test/check-answer/', views.check_multiple_choice, name='check_multiple_choice'),
-    # Личный кабинет
+    path('test/check-answer/', views.check_multiple_choice, name='check-answer'),
     path('my-words/', views.my_words, name='my_words'),
     path('my-words/add/', views.add_word, name='add_word'),
     path('my-words/remove/<int:word_id>/', views.remove_word, name='remove_word'),
@@ -30,8 +22,6 @@ urlpatterns = [
     path('test/check-matching/', views.check_matching, name='check_matching'),
     path('settings/', views.settings_page, name='settings'),
     path('my-words/review-now/<int:word_id>/', views.review_now, name='review_now'),
-
     path('export-words/', views.export_words_csv, name='export_words'),
     path('import-words/', views.import_words_csv, name='import_words'),
-
 ]

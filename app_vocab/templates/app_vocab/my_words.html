@@ -290,9 +290,8 @@
                         </button>
 
                     </td>
-
+                    <!-- КНОПКА УДАЛЕНИЯ -->
                     <td>
-                        <!-- КНОПКА УДАЛЕНИЯ -->
                         <form method="post" action="{% url 'app_vocab:remove_word' user_word.id %}" style="display: inline;">
                             {% csrf_token %}
                             <button type="submit" class="delete-btn"
@@ -301,6 +300,7 @@
                             </button>
                         </form>
                     </td>
+
                 </tr>
                 {% endfor %}
 
