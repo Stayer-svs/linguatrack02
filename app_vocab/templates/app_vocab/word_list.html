@@ -1,7 +1,6 @@
-<!-- app_vocab/templates/app_vocab/word_list.html -->
 {% extends "app_vocab/base.html" %}
 
-{% block title %}Тренажер{% endblock %}
+{% block title %}Тренажер слов{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -102,6 +101,19 @@
         color: #333;
         margin-bottom: 20px;
     }
+    .tts-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 1.2em;
+        margin-left: 10px;
+        padding: 5px;
+        border-radius: 50%;
+        transition: background-color 0.3s;
+    }
+    .tts-btn:hover {
+        background-color: #f0f0f0;
+    }
 </style>
 {% endblock %}
 
@@ -109,39 +121,92 @@
 <h1>🎓 Тренажер (SRS)</h1>
 
 <!-- Статистика -->
-{% if statistics %}
 <div class="stats-bar">
-    <span>📊 Всего слов: {{ statistics.total_words }}</span>
-    <span>🆕 Новые: {{ statistics.new_words }}</span>
-    <span>📚 В процессе: {{ statistics.learning_words }}</span>
-    <span>✅ Изучено: {{ statistics.learned_words }}</span>
-    <span>🎯 На сегодня: {{ statistics.today_words }}</span>
-</div>
-{% endif %}
-
-<div class="daily-limits" style="background: #e8f5e8; padding: 12px; border-radius: 8px; margin: 15px 0; text-align: center; border: 2px solid #4CAF50;">
-    <strong>📅 Дневные лимиты:</strong>
-    <span style="margin: 0 15px;">🔄 Повторений: <strong>{{ statistics.today_words }}</strong>/{{ statistics.daily_review_limit }}</span>
-    <span>🆕 Новых слов: <strong>{{ statistics.available_new_words }}</strong>/{{ statistics.daily_new_words }}</span>
+    <span>📊 Всего слов: {{ statistics.total }}</span>
+    <span>🆕 Новые: {{ statistics.new }}</span>
+    <span>📚 В процессе: {{ statistics.learning }}</span>
+    <span>✅ Изучено: {{ statistics.learned }}</span>
+    <span>🎯 На сегодня: {{ statistics.today }}</span>
 </div>
 
-<!-- После блока с лимитами Пояснения -->
-<div style="background: #e3f2fd; padding: 10px; border-radius: 5px; margin: 10px 0; font-size: 0.9em;text-align: center;">
-    💡 Система показывает слова, которые нужно повторить сегодня 💡
+<!-- Дневные лимиты -->
+<div class="stats-bar">
+    <span>📅 Дневные лимиты: 🔄 Повторений: {{ profile.daily_review_limit }}/ 🆕 Новых слов: {{ profile.daily_new_words }}</span>
 </div>
 
-
-
-<!-- Блок управления (реверс) -->
+<!-- Управление -->
 <div class="controls">
-    {% if is_reverse %}
-        <a href="?reverse=0"><button class="reverse-btn">Режим: ПЕРЕВОД → СЛОВО</button></a>
-        <p><small>(Показывается перевод, нужно вспомнить слово)</small></p>
-    {% else %}
-        <a href="?reverse=1"><button class="reverse-btn">Режим: СЛОВО → ПЕРЕВОД</button></a>
-        <p><small>(Показывается слово, нужно вспомнить перевод)</small></p>
-    {% endif %}
+    <button class="reverse-btn" onclick="location.href='?reverse={% if is_reverse %}0{% else %}1{% endif %}'">
+        {% if is_reverse %}🔁 С русского на английский{% else %}🔁 С английского на русский{% endif %}
+    </button>
 </div>
+
+<!-- Список слов для повторения -->
+{% if user_words %}
+    {% for user_word in user_words %}
+        <div class="word-card" id="word-{{ user_word.id }}">
+            <div class="word-header">
+                <div class="word-text">
+                    <span class="word-original">
+                        {% if is_reverse %}
+                            {{ user_word.word.translation }}
+                        {% else %}
+                            {{ user_word.word.original }}
+                        {% endif %}
+                    </span>
+                    <!-- КНОПКА ОЗВУЧКИ - ДОБАВЛЕНО -->
+                    {% if not is_reverse %}
+                    <button class="tts-btn" onclick="playWordAudio({{ user_word.word.id }})"
+                            title="Озвучить слово">
+                        🔊
+                    </button>
+                    {% endif %}
+                    {% if user_word.word.transcription and not is_reverse %}
+                    <span class="word-transcription">[{{ user_word.word.transcription }}]</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="transcription">
+                {% if user_word.word.transcription and not is_reverse %}
+                    Транскрипция: [{{ user_word.word.transcription }}]
+                {% endif %}
+            </div>
+
+            <div class="answer" id="answer-{{ user_word.id }}">
+                {% if is_reverse %}
+                    {{ user_word.word.original }}
+                {% else %}
+                    {{ user_word.word.translation }}
+                {% endif %}
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn show-btn" onclick="showAnswer({{ user_word.id }})">
+                    👀 Показать ответ
+                </button>
+                <button class="btn know-btn" onclick="submitAnswer({{ user_word.id }}, 'know')">
+                    ✅ Знаю
+                </button>
+                <button class="btn dont-know-btn" onclick="submitAnswer({{ user_word.id }}, 'dont_know')">
+                    ❌ Не знаю
+                </button>
+            </div>
+
+            <div class="progress-info">
+                Уровень: {{ user_word.get_repetition_display }} |
+                Повторений: {{ user_word.repetition }} |
+                След. повтор: {{ user_word.next_review|date:"d.m.Y" }}
+            </div>
+        </div>
+    {% endfor %}
+{% else %}
+    <div class="no-words">
+        <h3>🎉 Отличная работа!</h3>
+        <p>На сегодня слов для повторения нет.</p>
+        <p>Новые слова появятся завтра согласно вашим настройкам.</p>
+    </div>
+{% endif %}
 
 <!-- Список слов-карточек -->
 {% if user_words %}
@@ -153,46 +218,52 @@
                     {{ user_word.word.translation }}
                 {% else %}
                     {{ user_word.word.original }}
+                    <!-- КНОПКА ОЗВУЧКИ - ДОБАВЛЕНО -->
+                    <button class="tts-btn" onclick="playWordAudio({{ user_word.word.id }})"
+                            title="Озвучить слово">
+                        🔊
+                    </button>
                 {% endif %}
             </div>
 
-            <!-- Транскрипция (показываем только в прямом режиме) -->
-            {% if not is_reverse and user_word.word.transcription %}
-                <div class="transcription">[{{ user_word.word.transcription }}]</div>
+            <!-- Транскрипция (только для английского) -->
+            {% if user_word.word.transcription and not is_reverse %}
+            <div class="transcription">
+                [{{ user_word.word.transcription }}]
+            </div>
             {% endif %}
 
-            <!-- Ответ (изначально скрыт) -->
-            <div class="answer" id="answer-{{ user_word.id }}">
+            <!-- Ответ -->
+            <div class="answer">
                 {% if is_reverse %}
-                    <strong>{{ user_word.word.original }}</strong>
-                    {% if user_word.word.transcription %}
-                        <br><em>[{{ user_word.word.transcription }}]</em>
-                    {% endif %}
+                    {{ user_word.word.original }}
                 {% else %}
-                    <strong>{{ user_word.word.translation }}</strong>
+                    {{ user_word.word.translation }}
                 {% endif %}
             </div>
 
             <!-- Кнопки действий -->
             <div class="action-buttons">
-                <!-- Кнопка "Показать перевод" -->
-                <button class="btn show-btn" onclick="showAnswer({{ user_word.id }})">Показать ответ</button>
-
-
-                <!-- Кнопки "Знаю"/"Не знаю" (изначально скрыты) -->
-                <span id="knowledge-buttons-{{ user_word.id }}" style="display: none;">
-                    <a href="?word_id={{ user_word.id }}&action=know{% if is_reverse %}&reverse=1{% endif %}">
-                        <button class="btn know-btn">Знаю ✓</button>
-                    </a>
-                    <a href="?word_id={{ user_word.id }}&action=dont_know{% if is_reverse %}&reverse=1{% endif %}">
-                        <button class="btn dont-know-btn">Не знаю ✗</button>
-                    </a>
-                </span>
+                <button class="btn show-btn" onclick="toggleAnswer(this)">
+                    👀 Показать перевод
+                </button>
+                <form method="post" action=".?word_id={{ user_word.id }}&action=know" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn know-btn">
+                        ✅ Знаю
+                    </button>
+                </form>
+                <form method="post" action=".?word_id={{ user_word.id }}&action=dont_know" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn dont-know-btn">
+                        ❌ Не знаю
+                    </button>
+                </form>
             </div>
 
             <!-- Информация о прогрессе -->
             <div class="progress-info">
-                Уровень: {{ user_word.get_knowledge_level }} |
+                Уровень: {{ user_word.get_repetition_display }} |
                 Повторений: {{ user_word.repetition }} |
                 След. повтор: {{ user_word.next_review|date:"d.m.Y" }}
             </div>
@@ -201,26 +272,56 @@
 {% else %}
     <div class="no-words">
         <h3>🎉 Отличная работа!</h3>
-        <p>На сегодня все слова повторены.</p>
-        <p>Новые слова появятся согласно расписанию интервальных повторений.</p>
-        {% if no_words_message %}
-            <p><a href="{% url 'app_vocab:my_words' %}" style="color: #2196F3; text-decoration: none; font-weight: bold;">
-        ➕ Или добавьте слова кнопкой «Сейчас» на вкладке «Мои слова»
-    </a></p>
-        {% endif %}
+        <p>На сегодня слов для повторения нет.</p>
+        <p>Новые слова появятся завтра согласно вашим настройкам.</p>
     </div>
 {% endif %}
-{% endblock %}
 
-{% block extra_js %}
 <script>
-    function showAnswer(userWordId) {
-        // Показываем блок с ответом
-        document.getElementById('answer-' + userWordId).style.display = 'block';
-        // Показываем кнопки "Знаю"/"Не знаю"
-        document.getElementById('knowledge-buttons-' + userWordId).style.display = 'inline';
-        // Скрываем кнопку "Показать ответ"
-        event.target.style.display = 'none';
+function showAnswer(wordId) {
+    document.getElementById('answer-' + wordId).style.display = 'block';
+}
+
+function submitAnswer(wordId, action) {
+    window.location.href = `.?word_id=${wordId}&action=${action}`;
+}
+
+function toggleAnswer(button) {
+    const answer = button.parentElement.parentElement.querySelector('.answer');
+    if (answer.style.display === 'block') {
+        answer.style.display = 'none';
+        button.textContent = '👀 Показать перевод';
+    } else {
+        answer.style.display = 'block';
+        button.textContent = '🙈 Скрыть перевод';
     }
+}
+
+// ФУНКЦИЯ ОЗВУЧКИ - ДОБАВЛЕНО
+function playWordAudio(wordId) {
+    const button = event.target;
+    const originalHTML = button.innerHTML;
+    button.innerHTML = '⏳';
+    button.disabled = true;
+
+    fetch(`/generate-audio/${wordId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const audio = new Audio(data.audio_url);
+                audio.play();
+            } else {
+                alert('Ошибка озвучки: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Ошибка при генерации аудио');
+        })
+        .finally(() => {
+            button.innerHTML = originalHTML;
+            button.disabled = false;
+        });
+}
 </script>
 {% endblock %}

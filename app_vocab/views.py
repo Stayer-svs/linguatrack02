@@ -4,21 +4,31 @@ import csv
 from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
 from django.contrib import messages
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login
-
+from django.urls import reverse
 from django.utils import timezone
 from django.http import JsonResponse
 from .models import Word, UserWord
-from .services import get_today_words, process_user_answer, get_user_statistics, get_or_create_user_profile
+
+from .services import (
+    get_today_words,
+    process_user_answer,
+    get_user_statistics,
+    get_or_create_user_profile,
+    get_words_for_games
+)
+
+# Озвучка слов (TTS)
+from .tts_service import text_to_speech
+
 
 
 @login_required
 def word_list(request):
     """
-    Главная страница-тренажер с системой интервальных повторений.
+    Страница-тренажер с системой интервальных повторений.
     """
     # ФИЛЬТРУЕМ СЛОВА ТЕКУЩЕГО ПОЛЬЗОВАТЕЛЯ
     words_for_review = Word.objects.filter(
@@ -80,13 +90,12 @@ def statistics(request):
     return render(request, 'app_vocab/statistics.html', {'statistics': stats})
 
 
-
 @login_required
 def multiple_choice_test(request):
     """
     Тест с множественным выбором с учетом настроек пользователя.
     """
-    from .services import get_today_words
+   #from .services import get_today_words
     import random
 
     profile = get_or_create_user_profile(request.user)
@@ -98,7 +107,7 @@ def multiple_choice_test(request):
 
     # Получаем слова с учетом настроек
 
-    from .services import get_words_for_games
+    #from .services import get_words_for_games
     today_words = get_words_for_games(request.user, min_words=5)
 
     if not today_words:
@@ -172,7 +181,7 @@ def check_multiple_choice(request):
 @login_required
 def my_words(request):
     """
-    Страница "Мой Словарь" - просмотр всех слов пользователя с сортировкой.
+    Главная Страница "Мой Словарь" - просмотр всех слов пользователя с сортировкой.
     """
     # Получаем параметр сортировки из GET запроса
     sort_by = request.GET.get('sort', 'date_added')  # по умолчанию по дате добавления
@@ -250,20 +259,23 @@ def add_word(request):
 
     return render(request, 'app_vocab/add_word.html')
 
-@login_required
+
 def remove_word(request, word_id):
-    """
-    Удаление слова из словаря пользователя.
-    """
-    try:
-        user_word = UserWord.objects.get(id=word_id, user=request.user)
-        word_text = user_word.word.original
-        user_word.delete()
-        messages.success(request, f'Слово "{word_text}" удалено из вашего словаря.')
-    except UserWord.DoesNotExist:
-        messages.error(request, 'Слово не найдено в вашем словаре.')
+    """Удаление слова из словаря пользователя"""
+    if request.method == 'POST':
+        try:
+            user_word = UserWord.objects.get(id=word_id, user=request.user)
+            user_word.delete()
+            messages.success(request, 'Слово удалено из вашего словаря')
+        except UserWord.DoesNotExist:
+            messages.error(request, 'Слово не найдено')
+
+        # СОХРАНЯЕМ СОРТИРОВКУ ПРИ ПЕРЕНАПРАВЛЕНИИ
+        current_sort = request.POST.get('current_sort', 'date_added')
+        return redirect(f'{reverse("app_vocab:my_words")}?sort={current_sort}')
 
     return redirect('app_vocab:my_words')
+
 
 ###
 @login_required
@@ -271,7 +283,7 @@ def matching_game(request):
     """
     Режим сопоставления с отдельной логикой подбора слов.
     """
-    from .services import get_words_for_games
+    #from .services import get_words_for_games
     import random
 
     profile = get_or_create_user_profile(request.user)
@@ -510,3 +522,21 @@ def import_words_csv(request):
         return redirect('app_vocab:my_words')
 
     return render(request, 'app_vocab/import_csv.html')
+
+
+from app_vocab.tts_service import text_to_speech
+
+
+def generate_audio(request, word_id):
+    """Генерация аудио для слова"""
+    try:
+        word = Word.objects.get(id=word_id)
+        audio_url = text_to_speech(word.original, lang='en')
+
+        if audio_url:
+            return JsonResponse({'success': True, 'audio_url': audio_url})
+        else:
+            return JsonResponse({'success': False, 'error': 'Failed to generate audio'})
+
+    except Word.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Word not found'})
