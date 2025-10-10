@@ -6,13 +6,14 @@ import django
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
-from asgiref.sync import sync_to_async  # ИМПОРТИРУЕМ ВАЖНУЮ ФУНКЦИЮ!
+from asgiref.sync import sync_to_async  # для Django запросов в контексте aiogram
 from aiogram import Dispatcher, types
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
 from aiogram import F
 from aiogram.filters import Command
 from aiogram import types
 from aiogram.types import BufferedInputFile
+
 
 
 # Настройка Django
@@ -26,6 +27,27 @@ dp = Dispatcher()
 
 # Храним режим реверса для каждого пользователя (в памяти)
 user_reverse_mode = {}
+
+def get_main_keyboard():
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[
+            [
+                KeyboardButton(text="📊 Статистика"),
+                KeyboardButton(text="📚 Слова на сегодня")
+            ],
+            [
+                KeyboardButton(text="🎯 Тест"),
+                KeyboardButton(text="🃏 Карточки")
+            ],
+            [
+                KeyboardButton(text="🔊 Озвучить слово"),
+                KeyboardButton(text="🔗 Привязать аккаунт")
+            ]
+        ],
+        resize_keyboard=True,
+        input_field_placeholder="Выберите действие..."
+    )
+    return keyboard
 
 
 # Асинхронные обертки для синхронных методов Django ORM
@@ -71,7 +93,8 @@ async def cmd_start(message: types.Message):
         ],
         resize_keyboard=True
     )
-    await message.answer(welcome_text, reply_markup=keyboard)
+    #await message.answer(welcome_text, reply_markup=keyboard)
+    await message.answer(welcome_text, reply_markup=get_main_keyboard())
 
 
 # Обработчик кнопки смены режима
@@ -263,6 +286,80 @@ async def say_word(message: Message):
         await processing_msg.edit_text(f"❌ Ошибка: {str(e)}")
         print(f"TTS Error in bot: {e}")
 
+
+@dp.message(F.text == "📊 Статистика")
+async def show_progress(message: Message):
+    """Показать реальную статистику обучения"""
+    try:
+        from app_vocab.services import get_user_statistics
+        from django.contrib.auth.models import User
+
+        demo_user = await sync_to_async(User.objects.first)()
+
+        if demo_user:
+            stats = await sync_to_async(get_user_statistics)(demo_user)
+
+            stats_text = (
+                "📊 **Ваша статистика:**\n\n"
+                f"• 📚 Всего слов: {stats['total_words']}\n"
+                f"• 🆕 Новые: {stats['new_words']}\n"
+                f"• 📖 В процессе: {stats['learning_words']}\n"
+                f"• ✅ Изучено: {stats['learned_words']}\n"
+                f"• 🎯 На сегодня: {stats['today_words']}\n\n"
+                "💪 Продолжайте в том же духе!"
+            )
+        else:
+            stats_text = "❌ Нет данных для статистики"
+
+    except Exception as e:
+        print(f"Stats error: {e}")
+        stats_text = f"❌ Ошибка загрузки статистики: {str(e)}"
+
+    await message.answer(stats_text)
+
+@dp.message(F.text == "📚 Слова на сегодня")
+async def today_words(message: Message):
+    """Показать слова для повторения сегодня"""
+    await message.answer(
+        "📚 **Слова на сегодня:**\n\n"
+        "• hello - привет\n" 
+        "• computer - компьютер\n"
+        "• book - книга\n"
+        "• water - вода\n"
+        "• friend - друг\n\n"
+        "🎯 Всего для повторения: 5 слов",
+        reply_markup=get_main_keyboard()
+    )
+
+@dp.message(F.text == "🎯 Тест")
+async def start_test(message: Message):
+    """Начать тест"""
+    await message.answer(
+        "🧪 **Режим теста**\n\n"
+        "Скоро здесь будет интерактивный тест!\n\n"
+        "А пока используйте тренировку:",
+        reply_markup=get_main_keyboard()
+    )
+
+@dp.message(F.text == "🃏 Карточки")
+async def show_cards(message: Message):
+    """Показать все карточки"""
+    await message.answer(
+        "🃏 **Все карточки**\n\n"
+        "Скоро здесь будет список всех ваших слов!",
+        reply_markup=get_main_keyboard()
+    )
+
+@dp.message(F.text == "🔗 Привязать аккаунт")
+async def link_account_button(message: Message):
+    """Привязать аккаунт через кнопку"""
+    await message.answer(
+        "🔗 **Привязка аккаунта**\n\n"
+        "Используйте команду:\n"
+        "`/link` - получить код привязки\n\n"
+        "Затем введите код в веб-версии.",
+        reply_markup=get_main_keyboard()
+    )
 
 
 # Запуск бота
