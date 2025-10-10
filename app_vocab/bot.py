@@ -317,19 +317,39 @@ async def show_progress(message: Message):
 
     await message.answer(stats_text)
 
+
 @dp.message(F.text == "📚 Слова на сегодня")
 async def today_words(message: Message):
-    """Показать слова для повторения сегодня"""
-    await message.answer(
-        "📚 **Слова на сегодня:**\n\n"
-        "• hello - привет\n" 
-        "• computer - компьютер\n"
-        "• book - книга\n"
-        "• water - вода\n"
-        "• friend - друг\n\n"
-        "🎯 Всего для повторения: 5 слов",
-        reply_markup=get_main_keyboard()
-    )
+    """Показать реальные слова для повторения сегодня"""
+    try:
+        from app_vocab.services import get_today_words
+        from django.contrib.auth.models import User
+
+        demo_user = await sync_to_async(User.objects.first)()
+
+        if demo_user:
+            # Получаем QuerySet и оцениваем его
+            today_words_qs = await sync_to_async(get_today_words)(demo_user, limit=10)
+            today_words_list = await sync_to_async(list)(today_words_qs)
+
+            if today_words_list:
+                words_text = "📚 **Слова на сегодня:**\n\n"
+                for user_word in today_words_list:
+                    words_text += f"• {user_word.word.original} - {user_word.word.translation}\n"
+
+                words_text += f"\n🎯 Всего для повторения: {len(today_words_list)} слов"
+            else:
+                words_text = "🎉 **Отличная работа!**\n\nНа сегодня слов для повторения нет."
+
+        else:
+            words_text = "❌ Нет данных о словах"
+
+    except Exception as e:
+        print(f"Today words error: {e}")
+        words_text = "❌ Ошибка загрузки слов"
+
+    await message.answer(words_text, reply_markup=get_main_keyboard())
+
 
 @dp.message(F.text == "🎯 Тест")
 async def start_test(message: Message):
