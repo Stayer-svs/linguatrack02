@@ -136,6 +136,9 @@ class UserProfile(models.Model):
     # Уведомления (можно заменить существующее поле или оставить оба):
     daily_goal_reminder = models.BooleanField(default=True, verbose_name='Напоминание о целях')
 
+    # телеграм бот
+    telegram_id = models.CharField(max_length=100, blank=True, null=True)
+    telegram_username = models.CharField(max_length=100, blank=True, null=True)
 
     class Meta:
         verbose_name = 'Профиль пользователя'

@@ -1,0 +1,37 @@
+{% extends "app_vocab/base.html" %}
+
+{% block title %}Telegram-бот{% endblock %}
+
+{% block content %}
+<div class="container" style="text-align: center; padding: 40px;">
+    <h1>📱 Telegram-бот</h1>
+
+    {% if user.userprofile.telegram_id %}
+    <div class="alert alert-success">
+        ✅ Ваш аккаунт привязан к Telegram!
+        <br><small>ID: {{ user.userprofile.telegram_id }}</small>
+    </div>
+    {% else %}
+    <!-- ФОРМА ПРИВЯЗКИ -->
+    <div class="alert alert-info">
+        <h4>🔗 Привяжите Telegram-аккаунт</h4>
+        <form method="post" action="{% url 'app_vocab:link_telegram' %}">
+            {% csrf_token %}
+            <div style="margin: 20px 0;">
+                <input type="text" name="link_code"
+                       placeholder="Введите код из бота"
+                       style="padding: 10px; font-size: 1.1em; width: 200px;"
+                       required>
+                <button type="submit" class="btn btn-primary"
+                        style="padding: 10px 20px; margin-left: 10px;">
+                    🔗 Привязать
+                </button>
+            </div>
+        </form>
+        <p>Получите код в боте командой: <code>/link</code></p>
+    </div>
+    {% endif %}
+
+    <!-- остальная часть страницы -->
+</div>
+{% endblock %}

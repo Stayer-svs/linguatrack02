@@ -7,6 +7,13 @@ from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from asgiref.sync import sync_to_async  # ИМПОРТИРУЕМ ВАЖНУЮ ФУНКЦИЮ!
+from aiogram import Dispatcher, types
+from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
+from aiogram import F
+from aiogram.filters import Command
+from aiogram import types
+from aiogram.types import BufferedInputFile
+
 
 # Настройка Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
@@ -185,6 +192,77 @@ async def next_word(callback: types.CallbackQuery):
     await callback.message.delete()
     await send_random_word(callback.from_user.id)
     await callback.answer()
+
+
+# СТАРЫЙ СИНТАКСИС (aiogram 2.x):
+# @dp.message_handler(commands=['link'])
+
+# НОВЫЙ СИНТАКСИС (aiogram 3.x):
+@dp.message(Command("link"))
+async def link_account(message: Message):
+    """Генерация кода для привязки аккаунта"""
+    user_id = message.from_user.id
+
+    # Генерируем уникальный код
+    import secrets
+    link_code = secrets.token_hex(4).upper()  # 8-символьный код
+
+    await message.answer(
+        f"🔗 **Привязка аккаунта**\n\n"
+        f"Ваш код: `{link_code}`\n\n"
+        f"1. Перейдите в веб-версию\n"
+        f"2. Введите этот код в разделе Telegram-бота\n"
+        f"3. Аккаунты будут связаны автоматически\n\n"
+        f"Код действителен 10 минут ⏳"
+    )
+
+@dp.message(Command("say"))
+async def say_word(message: Message):
+    """Озвучка слова через TTS"""
+    command_parts = message.text.split(' ', 1)
+
+    if len(command_parts) < 2:
+        await message.answer(
+            "🎯 **Использование:**\n"
+            "`/say слово` - озвучить слово\n\n"
+            "**Пример:**\n"
+            "`/say hello`\n"
+            "`/say computer`"
+        )
+        return
+
+    word_to_speak = command_parts[1].strip()
+
+    if len(word_to_speak) > 50:
+        await message.answer("❌ Слишком длинный текст (максимум 50 символов)")
+        return
+
+    processing_msg = await message.answer("🔊 Генерирую аудио...")
+
+    try:
+        from app_vocab.tts_service import text_to_speech
+
+        result = text_to_speech(word_to_speak, lang='en')
+
+        if result and result['filepath']:
+            # ПРАВИЛЬНЫЙ СПОСОБ В aiogram 3.x
+            with open(result['filepath'], 'rb') as audio_file:
+                audio_data = audio_file.read()
+
+            voice_message = BufferedInputFile(audio_data, filename="word.mp3")
+
+            await message.answer_voice(
+                voice=voice_message,
+                caption=f"🔊 **{word_to_speak}**"
+            )
+            await processing_msg.delete()
+        else:
+            await processing_msg.edit_text("❌ Ошибка генерации аудио")
+
+    except Exception as e:
+        await processing_msg.edit_text(f"❌ Ошибка: {str(e)}")
+        print(f"TTS Error in bot: {e}")
+
 
 
 # Запуск бота

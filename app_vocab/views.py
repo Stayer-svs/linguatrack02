@@ -12,6 +12,7 @@ from django.utils import timezone
 from django.http import JsonResponse
 from .models import Word, UserWord
 
+
 from .services import (
     get_today_words,
     process_user_answer,
@@ -540,3 +541,33 @@ def generate_audio(request, word_id):
 
     except Word.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Word not found'})
+
+
+def telegram_bot(request):
+    """Страница интеграции с Telegram-ботом"""
+    context = {
+        'bot_username': 'ForeLanguageBot',      # для ссылки (из URL)
+        'bot_display_name': 'ForLanguageBot',   # для отображения (имя бота)
+    }
+    return render(request, 'app_vocab/telegram_bot.html', context)
+
+
+def link_telegram(request):
+    """Обработка привязки Telegram аккаунта"""
+    if request.method == 'POST':
+        link_code = request.POST.get('link_code', '').strip().upper()
+
+        # Здесь будет проверка кода и привязка
+        # Пока заглушка
+        if len(link_code) == 8:  # Пример проверки
+            # Временное решение - сохраняем ID вручную
+            profile = request.user.userprofile
+            profile.telegram_id = "temp_" + link_code  # Заглушка
+            profile.save()
+
+            messages.success(request, '✅ Аккаунт успешно привязан!')
+        else:
+            messages.error(request, '❌ Неверный код привязки')
+
+    return redirect('app_vocab:telegram_bot')
+

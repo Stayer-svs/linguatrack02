@@ -27,4 +27,6 @@ urlpatterns = [
     path('export-words/', views.export_words_csv, name='export_words'),
     path('import-words/', views.import_words_csv, name='import_words'),
     path('generate-audio/<int:word_id>/', views.generate_audio, name='generate_audio'),
+    path('telegram-bot/', views.telegram_bot, name='telegram_bot'),
+    path('link-telegram/', views.link_telegram, name='link_telegram'),
 ]

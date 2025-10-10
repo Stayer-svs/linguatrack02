@@ -160,14 +160,25 @@
     <div class="nav-links">
         <a href="{% url 'app_vocab:my_words' %}" class="nav-link">Мой Словарь</a>
         <a href="{% url 'app_vocab:word_list' %}" class="nav-link">Тренажер</a>
+
+
         <a href="{% url 'app_vocab:multiple_choice_test' %}" class="nav-link">Тест с выбором</a>
         <a href="{% url 'app_vocab:matching_game' %}" class="nav-link">Сопоставление</a>
         <a href="{% url 'app_vocab:statistics' %}" class="nav-link">Статистика</a>
         <a href="{% url 'app_vocab:settings' %}" class="nav-link">Настройки</a>
-        {% if user.is_staff %}
+        <a href="{% url 'app_vocab:telegram_bot' %}" class="nav-link" target="_blank"
+        title="Открыть Telegram-бота">
+        📱 Бот
+        </a>
 
+        {% if user.is_staff %}
         <a href="{% url 'admin:index' %}" class="nav-link">Админка</a>
         {% endif %}
+
+
+
+
+
     </div>
 
     <div class="auth-section">
