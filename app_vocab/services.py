@@ -145,3 +145,48 @@ def get_words_for_games(user, min_words=6):
     print(f"🎮 ДЛЯ ИГР: итого уникальных слов: {len(unique_words)}")
 
     return unique_words[:12]  # Ограничим для удобства игры
+
+
+from asgiref.sync import sync_to_async
+
+
+@sync_to_async
+def get_quiz_question_async():
+    """Асинхронная версия генерации вопроса для теста"""
+    return get_quiz_question()
+
+
+def get_quiz_question():
+    """Генерирует вопрос для теста в боте"""
+    from .models import Word
+    import random
+
+    # Простая синхронная версия получения случайных слов
+    all_words = list(Word.objects.all())
+    if len(all_words) < 4:
+        return None
+
+    words = random.sample(all_words, 4)
+
+    # Случайно выбираем тип вопроса
+    question_type = random.choice(['word_to_translation', 'translation_to_word'])
+
+    if question_type == 'word_to_translation':
+        correct_word = random.choice(words)
+        question = f"Выберите перевод слова:\n<b>{correct_word.original}</b>"
+        correct_answer = correct_word.translation
+        options = [word.translation for word in words]
+    else:
+        correct_word = random.choice(words)
+        question = f"Выберите слово для перевода:\n<b>{correct_word.translation}</b>"
+        correct_answer = correct_word.original
+        options = [word.original for word in words]
+
+    random.shuffle(options)
+
+    return {
+        'question': question,
+        'correct_answer': correct_answer,
+        'options': options,
+        'type': question_type
+    }

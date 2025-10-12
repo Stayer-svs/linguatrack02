@@ -5,14 +5,12 @@ import random
 import django
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from asgiref.sync import sync_to_async  # для Django запросов в контексте aiogram
-from aiogram import Dispatcher, types
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
-from aiogram import F
-from aiogram.filters import Command
-from aiogram import types
 from aiogram.types import BufferedInputFile
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.context import FSMContext
 
 
 
@@ -380,6 +378,132 @@ async def link_account_button(message: Message):
         "Затем введите код в веб-версии.",
         reply_markup=get_main_keyboard()
     )
+
+
+# Добавляем состояния для теста
+class QuizStates(StatesGroup):
+    waiting_for_answer = State()
+    in_progress = State()
+
+
+# Добавляем команду /quiz
+@dp.message(Command("quiz"))
+async def cmd_quiz(message: types.Message, state: FSMContext):
+    """Запуск интерактивного теста"""
+    #from .services import get_quiz_question
+    from .services import get_quiz_question_async
+
+    #question_data = get_quiz_question()
+    question_data = await get_quiz_question_async()
+
+    if not question_data:
+        await message.answer(
+            "❌ Недостаточно слов для теста. Добавьте слова через /add",
+            reply_markup=types.ReplyKeyboardRemove()
+        )
+        return
+
+    # Создаем клавиатуру с вариантами ответов
+    keyboard = []
+    for option in question_data['options']:
+        keyboard.append([types.KeyboardButton(text=option)])
+
+    reply_markup = types.ReplyKeyboardMarkup(
+        keyboard=keyboard,
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
+
+    # Отправляем вопрос
+    await message.answer(
+        f"🧪 <b>Тест:</b>\n\n"
+        f"<i>{question_data['question']}</i>",
+        reply_markup=reply_markup,
+        parse_mode='HTML'
+    )
+
+    # Сохраняем данные вопроса в состоянии
+    await state.set_state(QuizStates.waiting_for_answer)
+    await state.update_data(
+        correct_answer=question_data['correct_answer'],
+        question_type=question_data['type'],
+        score=0,
+        total_questions=1
+    )
+
+
+# Добавляем обработчик ответов
+@dp.message(QuizStates.waiting_for_answer)
+async def handle_quiz_answer(message: types.Message, state: FSMContext):
+    """Обработка ответа в тесте"""
+    #from .services import get_quiz_question
+    from .services import get_quiz_question_async
+
+    user_data = await state.get_data()
+    correct_answer = user_data.get('correct_answer')
+    user_answer = message.text
+
+    # Проверяем ответ
+    is_correct = user_answer == correct_answer
+    current_score = user_data.get('score', 0)
+
+    if is_correct:
+        current_score += 1
+        response = "✅ <b>Правильно!</b> 🎉"
+    else:
+        response = f"❌ <b>Неправильно</b>\nПравильный ответ: <code>{correct_answer}</code>"
+
+    # Обновляем счет
+    await state.update_data(score=current_score)
+
+    # Получаем следующий вопрос
+    #next_question = get_quiz_question()
+    next_question = await get_quiz_question_async()
+
+    if next_question:
+        # Создаем клавиатуру для следующего вопроса
+        keyboard = []
+        for option in next_question['options']:
+            keyboard.append([types.KeyboardButton(text=option)])
+
+        reply_markup = types.ReplyKeyboardMarkup(
+            keyboard=keyboard,
+            resize_keyboard=True,
+            one_time_keyboard=True
+        )
+
+        # Отправляем результат и следующий вопрос
+        await message.answer(
+            f"{response}\n\n"
+            f"🧪 <b>Следующий вопрос:</b>\n"
+            f"<i>{next_question['question']}</i>\n\n"
+            f"📊 Текущий счет: {current_score}",
+            reply_markup=reply_markup,
+            parse_mode='HTML'
+        )
+
+        # Обновляем состояние
+        await state.update_data(
+            correct_answer=next_question['correct_answer'],
+            question_type=next_question['type'],
+            total_questions=user_data.get('total_questions', 0) + 1
+        )
+
+    else:
+        # Завершаем тест
+        total_questions = user_data.get('total_questions', 1)
+        percentage = (current_score / total_questions) * 100
+
+        await message.answer(
+            f"🏁 <b>Тест завершен!</b>\n\n"
+            f"📊 <b>Результат:</b>\n"
+            f"• Правильных ответов: {current_score}/{total_questions}\n"
+            f"• Успешность: {percentage:.1f}%\n\n"
+            f"{'🎉 Отлично!' if percentage >= 80 else '👍 Хорошо!' if percentage >= 60 else '💪 Продолжайте практиковаться!'}",
+            reply_markup=types.ReplyKeyboardRemove(),
+            parse_mode='HTML'
+        )
+        await state.clear()
 
 
 # Запуск бота
