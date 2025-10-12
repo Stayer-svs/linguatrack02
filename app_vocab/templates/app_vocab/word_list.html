@@ -154,7 +154,7 @@
                             {{ user_word.word.original }}
                         {% endif %}
                     </span>
-                    <!-- КНОПКА ОЗВУЧКИ - ДОБАВЛЕНО -->
+                    <!-- КНОПКА ОЗВУЧКИ -->
                     {% if not is_reverse %}
                     <button class="tts-btn" onclick="playWordAudio({{ user_word.word.id }})"
                             title="Озвучить слово">
@@ -218,7 +218,7 @@
                     {{ user_word.word.translation }}
                 {% else %}
                     {{ user_word.word.original }}
-                    <!-- КНОПКА ОЗВУЧКИ - ДОБАВЛЕНО -->
+                    <!-- КНОПКА ОЗВУЧКИ -->
                     <button class="tts-btn" onclick="playWordAudio({{ user_word.word.id }})"
                             title="Озвучить слово">
                         🔊

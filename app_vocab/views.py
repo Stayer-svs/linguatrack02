@@ -532,15 +532,16 @@ def generate_audio(request, word_id):
     """Генерация аудио для слова"""
     try:
         word = Word.objects.get(id=word_id)
-        audio_url = text_to_speech(word.original, lang='en')
+        tts_result = text_to_speech(word.original, lang='en')  # ← получаем словарь
 
-        if audio_url:
-            return JsonResponse({'success': True, 'audio_url': audio_url})
+        if tts_result and 'url' in tts_result:
+            return JsonResponse({'success': True, 'audio_url': tts_result['url']})  # ← берем только URL
         else:
             return JsonResponse({'success': False, 'error': 'Failed to generate audio'})
 
     except Word.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Word not found'})
+
 
 
 def telegram_bot(request):
