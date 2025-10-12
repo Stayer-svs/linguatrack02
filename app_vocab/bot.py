@@ -506,6 +506,182 @@ async def handle_quiz_answer(message: types.Message, state: FSMContext):
         await state.clear()
 
 
+# Добавляем состояние для карточек
+class CardStates(StatesGroup):
+    viewing_card = State()
+    rating_difficulty = State()
+
+
+# Добавляем команду /cards
+@dp.message(Command("cards"))
+async def cmd_cards(message: types.Message, state: FSMContext):
+    """Показывает карточки для повторения"""
+    #from .services import get_review_cards
+    from .services import get_review_cards_async
+
+    cards = await get_review_cards_async()
+
+    if not cards:
+        await message.answer(
+            "📚 Нет слов для повторения. Добавьте слова через /add",
+            reply_markup=types.ReplyKeyboardRemove()
+        )
+        return
+
+    # Берем первую карточку
+    card = cards[0]
+    remaining = len(cards) - 1
+
+    # Создаем клавиатуру для переворота карточки
+    keyboard = [
+        [types.KeyboardButton(text="🔄 Показать перевод")],
+        [types.KeyboardButton(text="⏩ Следующая карточка")]
+    ]
+
+    reply_markup = types.ReplyKeyboardMarkup(
+        keyboard=keyboard,
+        resize_keyboard=True,
+        one_time_keyboard=False
+    )
+
+    await message.answer(
+        f"📖 <b>Карточка 1/{len(cards)}</b>\n\n"
+        f"<i>{card['word']}</i>\n\n"
+        f"Осталось карточек: {remaining}",
+        reply_markup=reply_markup,
+        parse_mode='HTML'
+    )
+
+    # Сохраняем данные карточек в состоянии
+    await state.set_state(CardStates.viewing_card)
+    await state.update_data(
+        cards=cards,
+        current_index=0,
+        translation=card['translation']
+    )
+
+
+# Обработчик действий с карточками
+@dp.message(CardStates.viewing_card)
+async def handle_card_action(message: types.Message, state: FSMContext):
+    """Обрабатывает действия с карточками (показать перевод/следующая)"""
+    user_data = await state.get_data()
+    cards = user_data.get('cards', [])
+    current_index = user_data.get('current_index', 0)
+    translation = user_data.get('translation', '')
+
+    if message.text == "🔄 Показать перевод":
+        # Показываем перевод текущей карточки
+        keyboard = [
+            [types.KeyboardButton(text="✅ Легко"),
+             types.KeyboardButton(text="🔄 Нормально"),
+             types.KeyboardButton(text="❌ Трудно")],
+            [types.KeyboardButton(text="⏩ Следующая карточка")]
+        ]
+
+        reply_markup = types.ReplyKeyboardMarkup(
+            keyboard=keyboard,
+            resize_keyboard=True,
+            one_time_keyboard=False
+        )
+
+        await message.answer(
+            f"📖 <b>Перевод:</b>\n\n"
+            f"<code>{translation}</code>\n\n"
+            f"<i>Оцените сложность слова:</i>",
+            reply_markup=reply_markup,
+            parse_mode='HTML'
+        )
+
+        await state.set_state(CardStates.rating_difficulty)
+
+    elif message.text == "⏩ Следующая карточка":
+        # Переходим к следующей карточке
+        await show_next_card(message, state, cards, current_index)
+
+    else:
+        await message.answer("Используйте кнопки для навигации 📝")
+
+
+# Функция для показа следующей карточки
+async def show_next_card(message: types.Message, state: FSMContext, cards: list, current_index: int):
+    """Показывает следующую карточку"""
+    next_index = current_index + 1
+
+    if next_index >= len(cards):
+        # Все карточки просмотрены
+        await message.answer(
+            "🎉 <b>Все карточки просмотрены!</b>\n\n"
+            "Отличная работа! 🏆",
+            reply_markup=types.ReplyKeyboardRemove(),
+            parse_mode='HTML'
+        )
+        await state.clear()
+        return
+
+    # Показываем следующую карточку
+    card = cards[next_index]
+    remaining = len(cards) - next_index - 1
+
+    keyboard = [
+        [types.KeyboardButton(text="🔄 Показать перевод")],
+        [types.KeyboardButton(text="⏩ Следующая карточка")]
+    ]
+
+    reply_markup = types.ReplyKeyboardMarkup(
+        keyboard=keyboard,
+        resize_keyboard=True,
+        one_time_keyboard=False
+    )
+
+    await message.answer(
+        f"📖 <b>Карточка {next_index + 1}/{len(cards)}</b>\n\n"
+        f"<i>{card['word']}</i>\n\n"
+        f"Осталось карточек: {remaining}",
+        reply_markup=reply_markup,
+        parse_mode='HTML'
+    )
+
+    await state.update_data(
+        current_index=next_index,
+        translation=card['translation']
+    )
+    # нужна при оценке сложности слов в карточке
+    await state.set_state(CardStates.viewing_card)
+
+
+# Обработчик оценки сложности слова
+@dp.message(CardStates.rating_difficulty)
+async def handle_difficulty_rating(message: types.Message, state: FSMContext):
+    """Обрабатывает оценку сложности слова"""
+    user_data = await state.get_data()
+    cards = user_data.get('cards', [])
+    current_index = user_data.get('current_index', 0)
+
+    # Обрабатываем оценку сложности
+    difficulty_emojis = {
+        "✅ Легко": "легко",
+        "🔄 Нормально": "нормально",
+        "❌ Трудно": "трудно"
+    }
+
+    if message.text in difficulty_emojis:
+        difficulty = difficulty_emojis[message.text]
+
+        # Здесь можно сохранить оценку в базу (пока просто логируем)
+        current_card = cards[current_index]
+        print(f"Пользователь оценил слово '{current_card['word']}' как '{difficulty}'")
+
+        await message.answer(
+            f"📊 Оценка сохранена: <b>{difficulty}</b>\n"
+            f"Слово: <code>{current_card['word']}</code>",
+            parse_mode='HTML'
+        )
+
+    # Переходим к следующей карточке независимо от оценки
+    await show_next_card(message, state, cards, current_index)
+
+
 # Запуск бота
 async def main():
     print("✅ Бот запущен и готов к работе!")

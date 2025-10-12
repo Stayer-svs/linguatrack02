@@ -190,3 +190,37 @@ def get_quiz_question():
         'options': options,
         'type': question_type
     }
+
+
+@sync_to_async
+def get_review_cards_async():
+    """Асинхронная версия получения карточек для повторения"""
+    return get_review_cards()
+
+
+def get_review_cards():
+    """Возвращает карточки для повторения"""
+    from .models import Word
+    import random
+
+    # Получаем все слова из базы
+    all_words = list(Word.objects.all())
+
+    if not all_words:
+        return []
+
+    # Берем случайные слова для повторения (максимум 10)
+    num_cards = min(10, len(all_words))
+    selected_words = random.sample(all_words, num_cards)
+
+
+    # Формируем карточки
+    cards = []
+    for word in selected_words:
+        cards.append({
+            'word': word.original,
+            'translation': word.translation,
+            'id': word.id
+        })
+
+    return cards
