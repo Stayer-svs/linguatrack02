@@ -25,6 +25,15 @@ class Word(models.Model):
         verbose_name='Уровень сложности'
     )
 
+    def get_audio_url(self):
+        """Возвращает URL для озвучки слова"""
+        from .tts_service import text_to_speech
+        tts_result = text_to_speech(self.original, lang='en')
+        if tts_result and 'url' in tts_result:
+            return tts_result['url']
+        return None
+
+
     class Meta:
         verbose_name = 'Слово'
         verbose_name_plural = 'Слова'
