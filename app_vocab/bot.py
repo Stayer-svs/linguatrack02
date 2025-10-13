@@ -48,6 +48,7 @@ def get_main_keyboard():
     return keyboard
 
 
+
 # Асинхронные обертки для синхронных методов Django ORM
 @sync_to_async
 def get_all_words():
@@ -78,22 +79,44 @@ def update_word_knowledge(word, increment=True):
 
 # Команда /start
 @dp.message(Command("start"))
-async def cmd_start(message: types.Message):
-    welcome_text = (
-        "Привет! 👋\n"
-        "Я бот для изучения иностранных слов.\n\n"
-        "Используй кнопки ниже для управления тренировкой."
-    )
-    keyboard = ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="🎓 Начать тренировку")],
-            [KeyboardButton(text="🔄 Режим: Слово → Перевод"), KeyboardButton(text="📊 Статистика")]
-        ],
-        resize_keyboard=True
-    )
-    #await message.answer(welcome_text, reply_markup=keyboard)
-    await message.answer(welcome_text, reply_markup=get_main_keyboard())
+async def cmd_start(message: types.Message, state: FSMContext):
+    """Начало работы с ботом"""
+    # Очищаем предыдущее состояние при запуске новой команды
+    current_state = await state.get_state()
+    if current_state:
+        await state.clear()
 
+    # Создаем клавиатуру с основными функциями
+    keyboard = [
+        [types.KeyboardButton(text="📚 Мои слова"),
+         types.KeyboardButton(text="🧪 Тест")],
+        [types.KeyboardButton(text="📖 Карточки"),
+         types.KeyboardButton(text="📊 Статистика")],
+        [types.KeyboardButton(text="➕ Добавить слово"),
+         types.KeyboardButton(text="🔊 Озвучка")],
+        [types.KeyboardButton(text="⏹️ Отмена")]
+    ]
+
+    reply_markup = types.ReplyKeyboardMarkup(
+        keyboard=keyboard,
+        resize_keyboard=True,
+        one_time_keyboard=False
+    )
+
+    await message.answer(
+        "👋 <b>Добро пожаловать в Vocabulary Trainer!</b>\n\n"
+        "Я помогу вам изучать иностранные слова эффективно 🚀\n\n"
+        "<b>Основные функции:</b>\n"
+        "• 📚 <b>Мои слова</b> - просмотр вашего словаря\n"
+        "• 🧪 <b>Тест</b> - проверка знаний с вариантами ответов\n"
+        "• 📖 <b>Карточки</b> - повторение слов с интервалами\n"
+        "• 📊 <b>Статистика</b> - прогресс изучения\n"
+        "• 🔊 <b>Озвучка</b> - прослушивание произношения\n\n"
+        "Используйте кнопки ниже или команды из меню 📱\n"
+        "Для отмены любой операции используйте <code>/cancel</code>",
+        reply_markup=reply_markup,
+        parse_mode='HTML'
+    )
 
 # Обработчик кнопки смены режима
 @dp.message(F.text.startswith("🔄 Режим:"))
@@ -390,10 +413,14 @@ class QuizStates(StatesGroup):
 @dp.message(Command("quiz"))
 async def cmd_quiz(message: types.Message, state: FSMContext):
     """Запуск интерактивного теста"""
-    #from .services import get_quiz_question
+
+    # Очищаем предыдущее состояние
+    current_state = await state.get_state()
+    if current_state:
+        await state.clear()
+
     from .services import get_quiz_question_async
 
-    #question_data = get_quiz_question()
     question_data = await get_quiz_question_async()
 
     if not question_data:
@@ -436,7 +463,7 @@ async def cmd_quiz(message: types.Message, state: FSMContext):
 @dp.message(QuizStates.waiting_for_answer)
 async def handle_quiz_answer(message: types.Message, state: FSMContext):
     """Обработка ответа в тесте"""
-    #from .services import get_quiz_question
+
     from .services import get_quiz_question_async
 
     user_data = await state.get_data()
@@ -516,7 +543,12 @@ class CardStates(StatesGroup):
 @dp.message(Command("cards"))
 async def cmd_cards(message: types.Message, state: FSMContext):
     """Показывает карточки для повторения"""
-    #from .services import get_review_cards
+
+    # Очищаем предыдущее состояние при запуске новой команды
+    current_state = await state.get_state()
+    if current_state:
+        await state.clear()
+
     from .services import get_review_cards_async
 
     cards = await get_review_cards_async()
@@ -682,10 +714,78 @@ async def handle_difficulty_rating(message: types.Message, state: FSMContext):
     await show_next_card(message, state, cards, current_index)
 
 
+# Функция для установки меню команд
+async def set_bot_commands():
+    """Устанавливает меню команд в боте с обработкой ошибок"""
+    try:
+        commands = [
+            types.BotCommand(command="/start", description="Начать работу"),
+            types.BotCommand(command="/words", description="Мои слова"),
+            types.BotCommand(command="/add", description="Добавить слово"),
+            types.BotCommand(command="/quiz", description="Пройти тест"),
+            types.BotCommand(command="/cards", description="Карточки для повторения"),
+            types.BotCommand(command="/stats", description="Статистика"),
+            types.BotCommand(command="/audio", description="Озвучка слов"),
+            types.BotCommand(command="/menu", description="Главное меню")
+        ]
+        await bot.set_my_commands(commands)
+        print("✅ Меню команд установлено")
+    except Exception as e:
+        print(f"⚠️ Не удалось установить меню команд: {e}")
+        print("Бот продолжит работу без меню")
+
+
+@dp.message(Command("menu"))
+async def cmd_menu(message: types.Message, state: FSMContext):
+    """Главное меню бота"""
+
+    # Очищаем предыдущее состояние при запуске новой команды
+    current_state = await state.get_state()
+    if current_state:
+        await state.clear()
+
+    await message.answer(
+        "🏠 <b>Главное меню Vocabulary Trainer</b>\n\n"
+        "📚 <b>Доступные команды:</b>\n"
+        "/start - Начать работу\n"
+        "/words - Мои слова\n" 
+        "/add - Добавить слово\n"
+        "/quiz - Пройти тест\n"
+        "/cards - Карточки для повторения\n"
+        "/stats - Статистика\n"
+        "/audio - Озвучка слов\n\n"
+        "Используйте команды или меню внизу экрана 📱",
+        parse_mode='HTML'
+    )
+
+
+@dp.message(Command("cancel"))
+@dp.message(F.text.lower() == "отмена")
+async def cmd_cancel(message: types.Message, state: FSMContext):
+    """Отмена текущей операции"""
+    current_state = await state.get_state()
+
+    if current_state is None:
+        await message.answer("❌ Нет активных операций для отмены")
+        return
+
+    await state.clear()
+    await message.answer(
+        "⏹️ <b>Операция отменена</b>\n\n"
+        "Возвращаюсь в главное меню 🏠",
+        reply_markup=types.ReplyKeyboardRemove(),
+        parse_mode='HTML'
+    )
+
+
+
+
 # Запуск бота
 async def main():
+    await set_bot_commands()  # Пытаемся установить меню
     print("✅ Бот запущен и готов к работе!")
     await dp.start_polling(bot)
+
 
 
 if __name__ == "__main__":
