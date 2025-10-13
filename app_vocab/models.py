@@ -124,7 +124,8 @@ class UserProfile(models.Model):
     Расширенный профиль пользователя для хранения настроек и статистики.
     """
     user = models.OneToOneField(User, on_delete=models.CASCADE, verbose_name='Пользователь')
-    telegram_id = models.BigIntegerField(null=True, blank=True, verbose_name='Telegram ID')
+    telegram_id = models.BigIntegerField(unique=True, blank=True, null=True, verbose_name='ID в Telegram')
+    telegram_username = models.CharField(max_length=100, blank=True, verbose_name='Username в Telegram')
     daily_review_limit = models.IntegerField(default=20, verbose_name='Лимит повторений в день')
     notification_enabled = models.BooleanField(default=True, verbose_name='Уведомления включены')
 
@@ -133,16 +134,16 @@ class UserProfile(models.Model):
     total_reviews = models.IntegerField(default=0, verbose_name='Всего повторений')
     streak_days = models.IntegerField(default=0, verbose_name='Дней подряд')
 
-    # НОВЫЕ поля настроек (ДОБАВИТЬ эти строки):
+    # НОВЫЕ поля настроек
     daily_new_words = models.IntegerField(default=5, verbose_name='Новых слов в день')
     default_interval = models.IntegerField(default=1, verbose_name='Базовый интервал (дни)')
 
-    # Настройки тестов (ДОБАВИТЬ):
+    # Настройки тестов
     enable_multiple_choice = models.BooleanField(default=True, verbose_name='Тест с выбором')
     enable_matching = models.BooleanField(default=True, verbose_name='Сопоставление')
     test_questions_count = models.IntegerField(default=10, verbose_name='Вопросов в тесте')
 
-    # Уведомления (можно заменить существующее поле или оставить оба):
+    # Уведомления
     daily_goal_reminder = models.BooleanField(default=True, verbose_name='Напоминание о целях')
 
     # телеграм бот

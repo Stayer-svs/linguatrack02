@@ -607,6 +607,115 @@ async def cmd_audio(message: types.Message, state: FSMContext):
             await message.answer(f"❌ Не удалось сгенерировать аудио для '{word.original}'")
 
 
+@dp.message(Command("link"))
+@dp.message(F.text == "🔗 Привязать аккаунт")
+async def cmd_link(message: types.Message, state: FSMContext):
+    """Привязка Telegram аккаунта к веб-пользователю"""
+    await clear_previous_state(state)
+
+    from django.contrib.auth.models import User
+    from .models import UserProfile
+    from asgiref.sync import sync_to_async
+    from django.db import IntegrityError
+
+    @sync_to_async
+    def link_account_async():
+        try:
+            # Пытаемся найти существующий профиль по telegram_id
+            try:
+                profile = UserProfile.objects.get(telegram_id=message.from_user.id)
+                # Профиль уже существует - обновляем username
+                profile.telegram_username = message.from_user.username
+                profile.save()
+                return False, profile  # created = False
+            except UserProfile.DoesNotExist:
+                # Создаем новый профиль
+                # Берем первого пользователя или создаем нового
+                user = User.objects.first()
+                if not user:
+                    user = User.objects.create_user('telegram_user', '', 'password')
+
+                profile = UserProfile.objects.create(
+                    user=user,
+                    telegram_id=message.from_user.id,
+                    telegram_username=message.from_user.username
+                )
+                return True, profile  # created = True
+
+        except IntegrityError:
+            # Если возникла ошибка уникальности, находим и обновляем существующий профиль
+            profile = UserProfile.objects.get(user=User.objects.first())
+            profile.telegram_id = message.from_user.id
+            profile.telegram_username = message.from_user.username
+            profile.save()
+            return False, profile
+
+    created, profile = await link_account_async()
+
+    if created:
+        response = (
+            "✅ <b>Аккаунт привязан!</b>\n\n"
+            f"Ваш Telegram аккаунт @{message.from_user.username} "
+            f"успешно привязан к веб-профилю."
+        )
+    else:
+        response = (
+            "🔗 <b>Аккаунт обновлен</b>\n\n"
+            f"Данные вашего Telegram аккаунта обновлены: @{message.from_user.username}"
+        )
+
+    await message.answer(response, parse_mode='HTML')
+
+
+@dp.message(Command("profile"))
+async def cmd_profile(message: types.Message, state: FSMContext):
+    """Показывает информацию о привязанном профиле"""
+    await clear_previous_state(state)
+
+    from .models import UserProfile
+    from asgiref.sync import sync_to_async
+
+    @sync_to_async
+    def get_profile_async():
+        try:
+            return UserProfile.objects.get(telegram_id=message.from_user.id)
+        except UserProfile.DoesNotExist:
+            return None
+
+    profile = await get_profile_async()
+
+    if profile:
+        # Получаем данные пользователя через асинхронную обертку
+        @sync_to_async
+        def get_user_data():
+            return {
+                'username': profile.user.username,
+                'telegram_id': profile.telegram_id,
+                'telegram_username': profile.telegram_username,
+                'daily_review_limit': profile.daily_review_limit
+            }
+
+        user_data = await get_user_data()
+
+        response = (
+            "👤 <b>Ваш профиль</b>\n\n"
+            f"• Веб-пользователь: <code>{user_data['username']}</code>\n"
+            f"• Telegram ID: <code>{user_data['telegram_id']}</code>\n"
+            f"• Username: @{user_data['telegram_username'] or 'не указан'}\n"
+            f"• Лимит повторений: <b>{user_data['daily_review_limit']}</b> слов/день\n\n"
+            f"Аккаунт успешно привязан! 🎯"
+        )
+    else:
+        response = (
+            "❌ <b>Профиль не привязан</b>\n\n"
+            "Используйте команду /link чтобы привязать "
+            "ваш Telegram аккаунт к веб-профилю."
+        )
+
+    await message.answer(response, parse_mode='HTML')
+
+
+
 # ===== ЗАПУСК БОТА =====
 async def main():
     await set_bot_commands()
