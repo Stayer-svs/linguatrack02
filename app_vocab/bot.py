@@ -47,8 +47,12 @@ async def set_bot_commands():
             BotCommand(command="/cards", description="Карточки для повторения"),
             BotCommand(command="/stats", description="Статистика"),
             BotCommand(command="/audio", description="Озвучка слов"),
+            BotCommand(command="/reminders", description="Управление напоминаниями"),
+            BotCommand(command="/link", description="Привязать аккаунт"),
+            BotCommand(command="/profile", description="Мой профиль"),
             BotCommand(command="/menu", description="Главное меню"),
             BotCommand(command="/cancel", description="Отмена операции")
+
         ]
         await bot.set_my_commands(commands)
         print("✅ Меню команд установлено")
@@ -62,6 +66,7 @@ def get_main_keyboard():
         [KeyboardButton(text="📚 Мои слова"), KeyboardButton(text="🧪 Тест")],
         [KeyboardButton(text="📖 Карточки"), KeyboardButton(text="📊 Статистика")],
         [KeyboardButton(text="➕ Добавить слово"), KeyboardButton(text="🔊 Озвучка")],
+        [KeyboardButton(text="🔔 Напомнить"), KeyboardButton(text="🔗 Привязать аккаунт")],
         [KeyboardButton(text="⏹️ Отмена")]
     ]
     return ReplyKeyboardMarkup(
@@ -606,6 +611,207 @@ async def cmd_audio(message: types.Message, state: FSMContext):
         else:
             await message.answer(f"❌ Не удалось сгенерировать аудио для '{word.original}'")
 
+
+# ===== НАПОМИНАНИЯ =====
+
+@dp.message(Command("remind"))
+@dp.message(F.text == "🔔 Напомнить")
+async def cmd_remind(message: types.Message, state: FSMContext):
+    """Ручной запуск напоминания о повторении слов"""
+    await clear_previous_state(state)
+
+    from .models import UserProfile, Word
+    from asgiref.sync import sync_to_async
+    import random
+
+    @sync_to_async
+    def get_reminder_data():
+        try:
+            profile = UserProfile.objects.get(telegram_id=message.from_user.id)
+            # Берем 3 случайных слова для повторения
+            words = list(Word.objects.all())
+            if len(words) > 3:
+                words = random.sample(words, 3)
+            return profile, words
+        except UserProfile.DoesNotExist:
+            return None, []
+
+    profile, words = await get_reminder_data()
+
+    if not profile:
+        await message.answer(
+            "❌ <b>Сначала привяжите аккаунт</b>\n\n"
+            "Используйте /link чтобы привязать Telegram к веб-профилю.",
+            parse_mode='HTML'
+        )
+        return
+
+    if not words:
+        await message.answer(
+            "📝 <b>Нет слов для повторения</b>\n\n"
+            "Добавьте слова через /add чтобы получать напоминания.",
+            parse_mode='HTML'
+        )
+        return
+
+    # Формируем сообщение с словами для повторения
+    words_list = "\n".join([f"• {word.original} - {word.translation}" for word in words])
+
+    await message.answer(
+        f"🔔 <b>Пора повторить слова!</b>\n\n"
+        f"{words_list}\n\n"
+        f"💡 <i>Используйте /quiz для теста или /cards для карточек</i>",
+        parse_mode='HTML'
+    )
+
+# ===== УПРАВЛЕНИЕ НАПОМИНАНИЯМИ =====
+
+@dp.message(Command("reminders"))
+async def cmd_reminders(message: types.Message, state: FSMContext):
+    """Управление настройками напоминаний"""
+    await clear_previous_state(state)
+
+    from .models import UserProfile
+    from asgiref.sync import sync_to_async
+
+    @sync_to_async
+    def get_profile_async():
+        try:
+            return UserProfile.objects.get(telegram_id=message.from_user.id)
+        except UserProfile.DoesNotExist:
+            return None
+
+    profile = await get_profile_async()
+
+    if not profile:
+        await message.answer(
+            "❌ <b>Сначала привяжите аккаунт</b>\n\n"
+            "Используйте /link чтобы привязать Telegram к веб-профилю.",
+            parse_mode='HTML'
+        )
+        return
+
+    keyboard = [
+        [KeyboardButton(text="🔄 Тестовое напоминание")],
+        [KeyboardButton(text="⚙️ Настройки напоминаний")],
+       #[KeyboardButton(text="📊 Статистика напоминаний")],
+        [KeyboardButton(text="⏪ Назад в меню")]
+    ]
+
+    reply_markup = ReplyKeyboardMarkup(
+        keyboard=keyboard,
+        resize_keyboard=True,
+        one_time_keyboard=False
+    )
+
+    await message.answer(
+        f"🔔 <b>Управление напоминаниями</b>\n\n"
+        f"Текущий лимит: <b>{profile.daily_review_limit}</b> слов/день\n"
+        f"⏰ Периодичность: <b>ежедневно</b>\n"
+        f"Статус: <b>Активны</b>\n\n"
+        f"Выберите действие:",
+        reply_markup=reply_markup,
+        parse_mode='HTML'
+    )
+
+
+@dp.message(F.text == "🔄 Тестовое напоминание")
+async def handle_test_reminder(message: types.Message, state: FSMContext):
+    """Отправляет тестовое напоминание"""
+    await cmd_remind(message, state)
+
+@dp.message(F.text == "⏪ Назад в меню")
+async def handle_back_to_menu(message: types.Message, state: FSMContext):
+    """Возвращает в главное меню"""
+    await cmd_start(message, state)
+
+
+# ===== НАСТРОЙКИ НАПОМИНАНИЙ =====
+
+@dp.message(F.text == "⚙️ Настройки напоминаний")
+async def handle_reminder_settings(message: types.Message, state: FSMContext):
+    """Настройка параметров напоминаний"""
+    from .models import UserProfile
+    from asgiref.sync import sync_to_async
+
+    @sync_to_async
+    def get_profile_async():
+        try:
+            return UserProfile.objects.get(telegram_id=message.from_user.id)
+        except UserProfile.DoesNotExist:
+            return None
+
+    profile = await get_profile_async()
+
+    if not profile:
+        await message.answer("❌ Сначала привяжите аккаунт через /link")
+        return
+
+    keyboard = [
+        [KeyboardButton(text="5 слов/день"), KeyboardButton(text="10 слов/день")],
+        [KeyboardButton(text="15 слов/день"), KeyboardButton(text="20 слов/день")],
+        [KeyboardButton(text="⏪ Назад к напоминаниям")]
+    ]
+
+    reply_markup = ReplyKeyboardMarkup(
+        keyboard=keyboard,
+        resize_keyboard=True,
+        one_time_keyboard=False
+    )
+
+    await message.answer(
+        f"⚙️ <b>Настройки напоминаний</b>\n\n"
+        f"Текущий лимит: <b>{profile.daily_review_limit}</b> слов/день\n\n"
+        f"Выберите новый лимит:",
+        reply_markup=reply_markup,
+        parse_mode='HTML'
+    )
+
+# ===== ДНЕВНОЙ ЛИМИТ =====
+
+@dp.message(F.text.contains("слов/день"))
+async def handle_limit_change(message: types.Message):
+    """Обрабатывает изменение лимита слов"""
+    from .models import UserProfile
+    from asgiref.sync import sync_to_async
+
+    # Извлекаем число из текста (например: "10 слов/день" -> 10)
+    new_limit = int(message.text.split()[0])
+
+    @sync_to_async
+    def update_limit_async():
+        try:
+            profile = UserProfile.objects.get(telegram_id=message.from_user.id)
+            profile.daily_review_limit = new_limit
+            profile.save()
+            return True
+        except UserProfile.DoesNotExist:
+            return False
+
+    success = await update_limit_async()
+
+    if success:
+        await message.answer(
+            f"✅ <b>Лимит обновлен!</b>\n\n"
+            f"Теперь вы будете получать <b>{new_limit}</b> слов для повторения.",
+            parse_mode='HTML'
+        )
+        await cmd_reminders(message, None)  # Возвращаем в меню напоминаний
+    else:
+        await message.answer("❌ Ошибка обновления лимита")
+
+
+
+@dp.message(F.text == "⏪ Назад к напоминаниям")
+async def handle_back_to_reminders(message: types.Message, state: FSMContext):
+    """Возвращает в меню управления напоминаниями"""
+    await cmd_reminders(message, state)
+
+
+
+
+
+# ===== ПРИВЯЗКА Telegram-аккаунтов к веб-пользователям =====
 
 @dp.message(Command("link"))
 @dp.message(F.text == "🔗 Привязать аккаунт")
