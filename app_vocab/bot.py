@@ -40,9 +40,10 @@ async def set_bot_commands():
     """Устанавливает меню команд в боте"""
     try:
         commands = [
-            BotCommand(command="/start", description="Начать работу"),
+            BotCommand(command="/start", description="Начать работу/Главное меню"),
             BotCommand(command="/words", description="Мои слова"),
             BotCommand(command="/add", description="Добавить слово"),
+            BotCommand(command="/delete", description="Удалить слово"),
             BotCommand(command="/quiz", description="Пройти тест"),
             BotCommand(command="/cards", description="Карточки для повторения"),
             BotCommand(command="/stats", description="Статистика"),
@@ -51,7 +52,7 @@ async def set_bot_commands():
             BotCommand(command="/link", description="Привязать аккаунт"),
             BotCommand(command="/profile", description="Мой профиль"),
             BotCommand(command="/menu", description="Главное меню"),
-            BotCommand(command="/cancel", description="Отмена операции")
+            BotCommand(command="/cancel", description="Отмена операции"),
 
         ]
         await bot.set_my_commands(commands)
@@ -103,6 +104,7 @@ async def show_next_card(message: types.Message, state: FSMContext, cards: list,
 
     keyboard = [
         [KeyboardButton(text="🔄 Показать перевод")],
+        [KeyboardButton(text="🔊 Озвучить слово")],
         [KeyboardButton(text="⏩ Следующая карточка")]
     ]
 
@@ -150,7 +152,7 @@ async def cmd_start(message: types.Message, state: FSMContext):
 
 @dp.message(Command("menu"))
 async def cmd_menu(message: types.Message, state: FSMContext):
-    """Главное меню бота"""
+    """Главное меню бота - перенаправляет на /start"""
     await clear_previous_state(state)
     await cmd_start(message, state)
 
@@ -238,6 +240,98 @@ async def process_translation(message: types.Message, state: FSMContext):
         reply_markup=get_main_keyboard()
     )
     await state.clear()
+
+# ===== УДАЛЕНИЕ СЛОВ =====
+@dp.message(Command("delete"))
+async def cmd_delete(message: types.Message, state: FSMContext):
+    """Начинает процесс удаления слова"""
+    await clear_previous_state(state)
+
+    from .models import Word
+    from asgiref.sync import sync_to_async
+
+    @sync_to_async
+    def get_words_async():
+        return list(Word.objects.all()[:10])
+
+    words = await get_words_async()
+
+    if not words:
+        await message.answer("📝 У вас пока нет добавленных слов.")
+        return
+
+    # Создаем клавиатуру со словами для удаления
+    keyboard = []
+    for word in words:
+        keyboard.append([KeyboardButton(text=f"❌ {word.original} - {word.translation}")])
+
+    keyboard.append([KeyboardButton(text="⏪ Отмена")])
+
+    reply_markup = ReplyKeyboardMarkup(
+        keyboard=keyboard,
+        resize_keyboard=True,
+        one_time_keyboard=False
+    )
+
+    await message.answer(
+        "🗑️ <b>Удаление слов</b>\n\n"
+        "Выберите слово для удаления:",
+        reply_markup=reply_markup,
+        parse_mode='HTML'
+    )
+
+    await state.update_data(words_for_deletion=words)
+
+
+@dp.message(F.text.startswith("❌"))
+async def handle_word_deletion(message: types.Message, state: FSMContext):
+    """Обрабатывает удаление выбранного слова"""
+    from .models import Word
+    from asgiref.sync import sync_to_async
+
+    # Извлекаем оригинал слова из текста кнопки
+    word_text = message.text.replace("❌ ", "").split(" - ")[0]
+
+    @sync_to_async
+    def delete_word_async():
+        try:
+            word = Word.objects.get(original=word_text)
+            word.delete()
+            return True, word_text
+        except Word.DoesNotExist:
+            return False, word_text
+
+    success, deleted_word = await delete_word_async()
+
+    if success:
+        await message.answer(
+            f"✅ <b>Слово удалено!</b>\n\n"
+            f"Слово '<code>{deleted_word}</code>' удалено из вашего словаря.",
+            parse_mode='HTML',
+            reply_markup=get_main_keyboard()
+        )
+    else:
+        await message.answer(
+            f"❌ <b>Ошибка удаления</b>\n\n"
+            f"Слово '<code>{deleted_word}</code>' не найдено.",
+            parse_mode='HTML',
+            reply_markup=get_main_keyboard()
+        )
+
+    await state.clear()
+
+
+@dp.message(F.text == "⏪ Отмена")
+async def handle_cancel_deletion(message: types.Message, state: FSMContext):
+    """Отмена процесса удаления слов"""
+    await state.clear()
+    await message.answer(
+        "⏹️ <b>Удаление отменено</b>\n\n"
+        "Возвращаюсь в главное меню 🏠",
+        reply_markup=get_main_keyboard(),
+        parse_mode='HTML'
+    )
+
 
 
 # ===== ТЕСТИРОВАНИЕ =====
@@ -368,6 +462,7 @@ async def cmd_cards(message: types.Message, state: FSMContext):
 
     keyboard = [
         [KeyboardButton(text="🔄 Показать перевод")],
+        [KeyboardButton(text="🔊 Озвучить слово")],
         [KeyboardButton(text="⏩ Следующая карточка")]
     ]
 
@@ -400,11 +495,18 @@ async def handle_card_action(message: types.Message, state: FSMContext):
     cards = user_data.get('cards', [])
     current_index = user_data.get('current_index', 0)
     translation = user_data.get('translation', '')
+    current_card = cards[current_index] if current_index < len(cards) else None
+
+    if not current_card:
+        await message.answer("❌ Ошибка: карточка не найдена")
+        await state.clear()
+        return
 
     if message.text == "🔄 Показать перевод":
         keyboard = [
-            [KeyboardButton(text="✅ Легко"), KeyboardButton(text="🔄 Нормально"), KeyboardButton(text="❌ Трудно")],
-            [KeyboardButton(text="⏩ Следующая карточка")]
+            [KeyboardButton(text="✅ Легко"), KeyboardButton(text="🔄 Нормально")],
+            [KeyboardButton(text="❌ Трудно"), KeyboardButton(text="⏩ Следующая карточка")]
+
         ]
 
         reply_markup = ReplyKeyboardMarkup(
@@ -414,7 +516,8 @@ async def handle_card_action(message: types.Message, state: FSMContext):
         )
 
         await message.answer(
-            f"📖 <b>Перевод:</b>\n\n<code>{translation}</code>\n\n<i>Оцените сложность слова:</i>",
+            f"📖 <b>Перевод:</b>\n\n<code>{translation}</code>\n\n"
+            f"<i>Оцените сложность слова:</i>",
             reply_markup=reply_markup,
             parse_mode='HTML'
         )
@@ -423,6 +526,45 @@ async def handle_card_action(message: types.Message, state: FSMContext):
 
     elif message.text == "⏩ Следующая карточка":
         await show_next_card(message, state, cards, current_index)
+
+
+    # ===== ОЗВУЧКА СЛОВА ТЕКУЩЕЙ КАРТОЧКИ =====
+
+    elif message.text == "🔊 Озвучить слово":
+        # Озвучка слова из текущей карточки
+        import os
+        from django.conf import settings
+
+        # Используем слово из карточки, а не ищем в базе
+        word_text = current_card['word']
+
+        # Генерируем аудио через TTS сервис
+        from .tts_service import text_to_speech
+        from asgiref.sync import sync_to_async
+
+        @sync_to_async
+        def generate_audio_async():
+            return text_to_speech(word_text, lang='en')
+
+        tts_result = await generate_audio_async()
+
+        if tts_result and 'url' in tts_result:
+            audio_url = tts_result['url']
+            filename = audio_url.replace('/media/audio/', '')
+            filepath = os.path.join(settings.MEDIA_ROOT, 'audio', filename)
+
+            if os.path.exists(filepath):
+                with open(filepath, 'rb') as audio_file:
+                    await message.answer(f"🔊 <b>{word_text}</b>", parse_mode='HTML')
+                    await message.answer_audio(
+                        audio=types.BufferedInputFile(audio_file.read(), filename=f"{word_text}.mp3"),
+                        title=word_text,
+                        performer="Vocabulary Trainer"
+                    )
+            else:
+                await message.answer("❌ Аудиофайл не найден")
+        else:
+            await message.answer("❌ Не удалось озвучить слово")
 
 
 @dp.message(CardStates.rating_difficulty)

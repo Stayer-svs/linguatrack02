@@ -32,5 +32,9 @@ staticfiles/
 .DS_Store
 Thumbs.db
 
+# Медиафайлы Django
+media/
+
+
 # Миграции (РАСКОММЕНТИРУЙТЕ, ЕСЛИ ХОТИТЕ ИХ ИГНОРИРОВАТЬ)
 # app_vocab/migrations/
