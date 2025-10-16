@@ -51,7 +51,7 @@ async def set_bot_commands():
             BotCommand(command="/reminders", description="Управление напоминаниями"),
             BotCommand(command="/link", description="Привязать аккаунт"),
             BotCommand(command="/profile", description="Мой профиль"),
-            BotCommand(command="/menu", description="Главное меню"),
+            #BotCommand(command="/menu", description="Главное меню"),
             BotCommand(command="/cancel", description="Отмена операции"),
 
         ]
@@ -66,9 +66,10 @@ def get_main_keyboard():
     keyboard = [
         [KeyboardButton(text="📚 Мои слова"), KeyboardButton(text="🧪 Тест")],
         [KeyboardButton(text="📖 Карточки"), KeyboardButton(text="📊 Статистика")],
-        [KeyboardButton(text="➕ Добавить слово"), KeyboardButton(text="🔊 Озвучка")],
-        [KeyboardButton(text="🔔 Напомнить"), KeyboardButton(text="🔗 Привязать аккаунт")],
-        [KeyboardButton(text="⏹️ Отмена")]
+        [KeyboardButton(text="➕ Добавить слово"), KeyboardButton(text="🗑️Удалить слово")],
+        [KeyboardButton(text="🔊 Озвучка"), KeyboardButton(text="🔔 Напомнить")],
+        [KeyboardButton(text="🔗 Профиль"), KeyboardButton(text="⏹️ Отмена")]
+
     ]
     return ReplyKeyboardMarkup(
         keyboard=keyboard,
@@ -105,7 +106,8 @@ async def show_next_card(message: types.Message, state: FSMContext, cards: list,
     keyboard = [
         [KeyboardButton(text="🔄 Показать перевод")],
         [KeyboardButton(text="🔊 Озвучить слово")],
-        [KeyboardButton(text="⏩ Следующая карточка")]
+        [KeyboardButton(text="⏩ Следующая карточка")],
+        [KeyboardButton(text="⏹️ Отмена")]
     ]
 
     reply_markup = ReplyKeyboardMarkup(
@@ -143,7 +145,8 @@ async def cmd_start(message: types.Message, state: FSMContext):
         "• 🧪 <b>Тест</b> - проверка знаний с вариантами ответов\n"
         "• 📖 <b>Карточки</b> - повторение слов с интервалами\n"
         "• 📊 <b>Статистика</b> - прогресс изучения\n"
-        "• 🔊 <b>Озвучка</b> - прослушивание произношения\n\n"
+        "• 🔊 <b>Озвучка</b> - прослушивание произношения\n"
+        "• 🗑️<b>Удаление слов</b> - управление вашим словарем\n\n"
         "Используйте кнопки ниже или команды из меню 📱",
         reply_markup=get_main_keyboard(),
         parse_mode='HTML'
@@ -197,6 +200,8 @@ async def cmd_words(message: types.Message, state: FSMContext):
     await message.answer(response, parse_mode='HTML')
 
 
+
+
 @dp.message(Command("add"))
 @dp.message(F.text == "➕ Добавить слово")
 async def cmd_add(message: types.Message, state: FSMContext):
@@ -209,6 +214,12 @@ async def cmd_add(message: types.Message, state: FSMContext):
 @dp.message(AddWord.waiting_original)
 async def process_original(message: types.Message, state: FSMContext):
     """Обрабатывает ввод иностранного слова"""
+    # ПРОВЕРЯЕМ ОТМЕНУ ПЕРЕД обработкой слова
+    if message.text == "⏹️ Отмена":
+        await cmd_cancel(message, state)
+        return
+
+
     await state.update_data(original=message.text)
     await message.answer("📝 Теперь введите перевод:")
     await state.set_state(AddWord.waiting_translation)
@@ -216,7 +227,12 @@ async def process_original(message: types.Message, state: FSMContext):
 
 @dp.message(AddWord.waiting_translation)
 async def process_translation(message: types.Message, state: FSMContext):
-    """Обрабатывает ввод перевода и сохраняет слово"""
+    """Обрабатывает ввод перевода"""
+    # ПРОВЕРЯЕМ ОТМЕНУ ПЕРЕД обработкой перевода
+    if message.text == "⏹️ Отмена":
+        await cmd_cancel(message, state)
+        return
+
     user_data = await state.get_data()
 
     from .models import Word
@@ -224,21 +240,34 @@ async def process_translation(message: types.Message, state: FSMContext):
 
     @sync_to_async
     def save_word_async():
+        # ПРОВЕРЯЕМ ДУБЛИКАТЫ
+        if Word.objects.filter(original=user_data['original']).exists():
+            return None, "duplicate"
+
         word = Word(
             original=user_data['original'],
             translation=message.text
         )
         word.save()
-        return word
+        return word, "success"
 
-    word = await save_word_async()
+    word, result = await save_word_async()
 
-    await message.answer(
-        f"✅ <b>Слово добавлено!</b>\n\n"
-        f"<code>{word.original}</code> - <code>{word.translation}</code>",
-        parse_mode='HTML',
-        reply_markup=get_main_keyboard()
-    )
+    if result == "duplicate":
+        await message.answer(
+            f"❌ <b>Слово уже существует!</b>\n\n"
+            f"Слово '<code>{user_data['original']}</code>' уже есть в вашем словаре.",
+            parse_mode='HTML',
+            reply_markup=get_main_keyboard()
+        )
+    elif word:
+        await message.answer(
+            f"✅ <b>Слово добавлено!</b>\n\n"
+            f"<code>{word.original}</code> - <code>{word.translation}</code>",
+            parse_mode='HTML',
+            reply_markup=get_main_keyboard()
+        )
+
     await state.clear()
 
 # ===== УДАЛЕНИЕ СЛОВ =====
@@ -265,7 +294,9 @@ async def cmd_delete(message: types.Message, state: FSMContext):
     for word in words:
         keyboard.append([KeyboardButton(text=f"❌ {word.original} - {word.translation}")])
 
+    # унифицируем с "⏹️ Отмена"
     keyboard.append([KeyboardButton(text="⏪ Отмена")])
+
 
     reply_markup = ReplyKeyboardMarkup(
         keyboard=keyboard,
@@ -274,7 +305,7 @@ async def cmd_delete(message: types.Message, state: FSMContext):
     )
 
     await message.answer(
-        "🗑️ <b>Удаление слов</b>\n\n"
+        "🗑️<b>Удаление слов</b>\n\n"
         "Выберите слово для удаления:",
         reply_markup=reply_markup,
         parse_mode='HTML'
@@ -332,6 +363,10 @@ async def handle_cancel_deletion(message: types.Message, state: FSMContext):
         parse_mode='HTML'
     )
 
+@dp.message(F.text == "🗑️Удалить слово")
+async def handle_delete_button(message: types.Message, state: FSMContext):
+    """Обрабатывает кнопку удаления слова из основного меню"""
+    await cmd_delete(message, state)
 
 
 # ===== ТЕСТИРОВАНИЕ =====
@@ -355,6 +390,9 @@ async def cmd_quiz(message: types.Message, state: FSMContext):
     keyboard = []
     for option in question_data['options']:
         keyboard.append([KeyboardButton(text=option)])
+
+        # КНОПКА ОТМЕНЫ
+    keyboard.append([KeyboardButton(text="⏹️ Отмена")])
 
     reply_markup = ReplyKeyboardMarkup(
         keyboard=keyboard,
@@ -380,6 +418,11 @@ async def cmd_quiz(message: types.Message, state: FSMContext):
 @dp.message(QuizStates.waiting_for_answer)
 async def handle_quiz_answer(message: types.Message, state: FSMContext):
     """Обработка ответа в тесте"""
+    # СНАЧАЛА ПРОВЕРЯЕМ ОТМЕНУ
+    if message.text == "⏹️ Отмена":
+        await cmd_cancel(message, state)
+        return
+
     from .services import get_quiz_question_async
 
     user_data = await state.get_data()
@@ -402,6 +445,9 @@ async def handle_quiz_answer(message: types.Message, state: FSMContext):
         keyboard = []
         for option in next_question['options']:
             keyboard.append([KeyboardButton(text=option)])
+
+        # КНОПКА ОТМЕНЫ ДЛЯ СЛЕДУЮЩЕГО ВОПРОСА
+        keyboard.append([KeyboardButton(text="⏹️ Отмена")])
 
         reply_markup = ReplyKeyboardMarkup(
             keyboard=keyboard,
@@ -460,10 +506,12 @@ async def cmd_cards(message: types.Message, state: FSMContext):
     card = cards[0]
     remaining = len(cards) - 1
 
+    # ОБНОВЛЕННАЯ КЛАВИАТУРА - добавил кнопку отмены
     keyboard = [
         [KeyboardButton(text="🔄 Показать перевод")],
         [KeyboardButton(text="🔊 Озвучить слово")],
-        [KeyboardButton(text="⏩ Следующая карточка")]
+        [KeyboardButton(text="⏩ Следующая карточка")],
+        [KeyboardButton(text="⏹️ Отмена")]
     ]
 
     reply_markup = ReplyKeyboardMarkup(
@@ -491,6 +539,12 @@ async def cmd_cards(message: types.Message, state: FSMContext):
 @dp.message(CardStates.viewing_card)
 async def handle_card_action(message: types.Message, state: FSMContext):
     """Обрабатывает действия с карточками"""
+    # СНАЧАЛА ПРОВЕРЯЕМ ОТМЕНУ
+    if message.text == "⏹️ Отмена":
+        await cmd_cancel(message, state)
+        return
+
+
     user_data = await state.get_data()
     cards = user_data.get('cards', [])
     current_index = user_data.get('current_index', 0)
@@ -505,8 +559,8 @@ async def handle_card_action(message: types.Message, state: FSMContext):
     if message.text == "🔄 Показать перевод":
         keyboard = [
             [KeyboardButton(text="✅ Легко"), KeyboardButton(text="🔄 Нормально")],
-            [KeyboardButton(text="❌ Трудно"), KeyboardButton(text="⏩ Следующая карточка")]
-
+            [KeyboardButton(text="❌ Трудно"), KeyboardButton(text="⏩ Следующая карточка")],
+            [KeyboardButton(text="⏹️ Отмена")]
         ]
 
         reply_markup = ReplyKeyboardMarkup(
@@ -757,7 +811,6 @@ async def cmd_audio(message: types.Message, state: FSMContext):
 # ===== НАПОМИНАНИЯ =====
 
 @dp.message(Command("remind"))
-@dp.message(F.text == "🔔 Напомнить")
 async def cmd_remind(message: types.Message, state: FSMContext):
     """Ручной запуск напоминания о повторении слов"""
     await clear_previous_state(state)
@@ -797,6 +850,58 @@ async def cmd_remind(message: types.Message, state: FSMContext):
         return
 
     # Формируем сообщение с словами для повторения
+    words_list = "\n".join([f"• {word.original} - {word.translation}" for word in words])
+
+    await message.answer(
+        f"🔔 <b>Пора повторить слова!</b>\n\n"
+        f"{words_list}\n\n"
+        f"💡 <i>Используйте /quiz для теста или /cards для карточек</i>",
+        parse_mode='HTML'
+    )
+
+
+@dp.message(F.text == "🔔 Напомнить")
+async def handle_remind_button(message: types.Message, state: FSMContext):
+    """Обрабатывает кнопку напоминаний из основного меню"""
+    await cmd_reminders(message, state)
+
+
+
+    from .models import UserProfile, Word
+    from asgiref.sync import sync_to_async
+    import random
+
+    @sync_to_async
+    def get_reminder_data():
+        try:
+            profile = UserProfile.objects.get(telegram_id=message.from_user.id)
+            # Берем 3 случайных слова для повторения
+            words = list(Word.objects.all())
+            if len(words) > 3:
+                words = random.sample(words, 3)
+            return profile, words
+        except UserProfile.DoesNotExist:
+            return None, []
+
+    profile, words = await get_reminder_data()
+
+    if not profile:
+        await message.answer(
+            "❌ <b>Сначала привяжите аккаунт</b>\n\n"
+            "Используйте /link чтобы привязать Telegram к веб-профилю.",
+            parse_mode='HTML'
+        )
+        return
+
+    if not words:
+        await message.answer(
+            "📝 <b>Нет слов для повторения</b>\n\n"
+            "Добавьте слова через /add чтобы получать напоминания.",
+            parse_mode='HTML'
+        )
+        return
+
+    # Формируем сообщение со словами для повторения
     words_list = "\n".join([f"• {word.original} - {word.translation}" for word in words])
 
     await message.answer(
@@ -850,7 +955,7 @@ async def cmd_reminders(message: types.Message, state: FSMContext):
         f"🔔 <b>Управление напоминаниями</b>\n\n"
         f"Текущий лимит: <b>{profile.daily_review_limit}</b> слов/день\n"
         f"⏰ Периодичность: <b>ежедневно</b>\n"
-        f"Статус: <b>Активны</b>\n\n"
+        f"Статус: <b>Активный</b>\n\n"
         f"Выберите действие:",
         reply_markup=reply_markup,
         parse_mode='HTML'
@@ -1062,6 +1167,37 @@ async def cmd_profile(message: types.Message, state: FSMContext):
 
     await message.answer(response, parse_mode='HTML')
 
+
+# обработчик для кнопки "🔗 Профиль"
+@dp.message(F.text == "🔗 Профиль")
+async def handle_profile_button(message: types.Message, state: FSMContext):
+    """Обрабатывает кнопку профиля из основного меню"""
+    await cmd_profile(message, state)
+
+
+
+# временная команда для очистки базы от дублей ошибочных слов
+@dp.message(Command("cleanup"))
+async def cmd_cleanup(message: types.Message):
+    """Очистка базы от ошибочных слов (временная команда)"""
+    from .models import Word
+    from asgiref.sync import sync_to_async
+
+    @sync_to_async
+    def cleanup_words():
+        # Удаляем слова, которые являются командами
+        words_to_delete = Word.objects.filter(original__in=["steamship", "/cancel"])
+        count = words_to_delete.count()
+        words_to_delete.delete()
+        return count
+
+    deleted_count = await cleanup_words()
+
+    await message.answer(
+        f"🧹 <b>Очистка завершена!</b>\n\n"
+        f"Удалено ошибочных слов: {deleted_count}",
+        parse_mode='HTML'
+    )
 
 
 # ===== ЗАПУСК БОТА =====
