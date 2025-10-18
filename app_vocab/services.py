@@ -1,9 +1,10 @@
 # app_vocab/services.py
 
 from django.utils import timezone
-from django.contrib.auth.models import User
 from .models import Word, UserWord, UserProfile
 import random
+
+from django.contrib.auth.models import User
 
 
 def get_or_create_user_profile(user):

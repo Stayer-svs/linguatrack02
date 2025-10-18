@@ -6,6 +6,7 @@ from aiogram.filters import Command
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, BotCommand
+
 from aiogram.types import BufferedInputFile
 import random
 
@@ -129,6 +130,7 @@ async def show_next_card(message: types.Message, state: FSMContext, cards: list,
         translation=card['translation']
     )
     await state.set_state(CardStates.viewing_card)
+
 
 
 # ===== ОСНОВНЫЕ КОМАНДЫ =====
